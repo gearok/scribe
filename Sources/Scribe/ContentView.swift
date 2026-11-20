@@ -118,8 +118,8 @@ struct ContentView: View {
                         .accessibilityAddTraits(.isHeader)
                     Spacer()
                 }
-                RecordingSearchField(text: $model.search, placeholder: L10n.text("Search"))
-                    .frame(height: 28)
+                RecordingSearchField(text: $model.search, focusRequest: $model.searchFocusRequest,
+                                     placeholder: L10n.text("Search"))
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
             .background(Color(nsColor: .textBackgroundColor))

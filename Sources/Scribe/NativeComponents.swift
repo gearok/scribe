@@ -23,14 +23,59 @@ struct FeatherSymbol: View {
 
 /// An inline native search field keeps search above the recordings column even
 /// when the separate folders sidebar is collapsed.
-struct RecordingSearchField: NSViewRepresentable {
+struct RecordingSearchField: View {
     @Binding var text: String
+    @Binding var focusRequest: Int
+    let placeholder: String
+    @State private var isFocused = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            NativeRecordingSearchField(text: $text, isFocused: $isFocused,
+                                       focusRequest: focusRequest, placeholder: placeholder)
+            Button {
+                text = ""
+                focusRequest += 1
+            } label: {
+                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    .frame(width: 22, height: 24).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(L10n.text("Clear Search"))
+            .accessibilityLabel(L10n.text("Clear Search"))
+        }
+        .padding(.leading, 12).padding(.trailing, 8)
+        .frame(height: 30)
+        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
+        .overlay {
+            Capsule().strokeBorder(isFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct NativeRecordingSearchField: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var isFocused: Bool
+    let focusRequest: Int
     let placeholder: String
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, isFocused: $isFocused, focusRequest: focusRequest)
+    }
 
     func makeNSView(context: Context) -> NSSearchField {
         let field = NSSearchField(string: text)
+        field.cell = PillSearchFieldCell(textCell: text)
+        field.isEditable = true
+        field.isSelectable = true
+        field.usesSingleLineMode = true
+        field.font = .systemFont(ofSize: NSFont.systemFontSize)
+        // Keep native search/text editor insets; only suppress the bezel drawing.
+        field.isBezeled = true
+        field.drawsBackground = false
+        field.focusRingType = .none
+        (field.cell as? NSSearchFieldCell)?.cancelButtonCell = nil
         field.delegate = context.coordinator
         field.sendsSearchStringImmediately = true
         field.target = context.coordinator
@@ -40,14 +85,36 @@ struct RecordingSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: NSSearchField, context: Context) {
         context.coordinator.text = $text
+        context.coordinator.isFocused = $isFocused
         if field.stringValue != text { field.stringValue = text }
-        field.placeholderString = placeholder
+        field.placeholderString = placeholder + " (⌘K)"
         field.setAccessibilityLabel(placeholder)
+        if context.coordinator.lastFocusRequest != focusRequest {
+            context.coordinator.lastFocusRequest = focusRequest
+            DispatchQueue.main.async { [weak field] in
+                guard let field, let window = field.window else { return }
+                window.makeFirstResponder(field)
+                field.selectText(nil)
+            }
+        }
+    }
+
+    final class PillSearchFieldCell: NSSearchFieldCell {
+        override func draw(withFrame frame: NSRect, in controlView: NSView) {
+            super.drawInterior(withFrame: frame, in: controlView)
+        }
     }
 
     final class Coordinator: NSObject, NSSearchFieldDelegate {
         var text: Binding<String>
-        init(text: Binding<String>) { self.text = text }
+        var isFocused: Binding<Bool>
+        var lastFocusRequest: Int
+        init(text: Binding<String>, isFocused: Binding<Bool>, focusRequest: Int) {
+            self.text = text; self.isFocused = isFocused; lastFocusRequest = focusRequest
+        }
+
+        func controlTextDidBeginEditing(_ notification: Notification) { isFocused.wrappedValue = true }
+        func controlTextDidEndEditing(_ notification: Notification) { isFocused.wrappedValue = false }
 
         func controlTextDidChange(_ notification: Notification) {
             if let field = notification.object as? NSSearchField { searchChanged(field) }

@@ -109,6 +109,9 @@ struct ScribeApp: App {
             CommandGroup(replacing: .appSettings) {
                 Button(L10n.text("Settings")) { model.showSettings = true }.keyboardShortcut(",")
             }
+            CommandGroup(after: .textEditing) {
+                Button(L10n.text("Search")) { model.searchFocusRequest += 1 }.keyboardShortcut("k")
+            }
         }
         MenuBarExtra {
             if model.recordingID != nil {

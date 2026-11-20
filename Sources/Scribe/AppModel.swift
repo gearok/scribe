@@ -14,6 +14,7 @@ final class AppModel: ObservableObject {
     @Published var speakers: [Speaker] = []
     @Published var segments: [TranscriptSegment] = []
     @Published var search = ""
+    @Published var searchFocusRequest = 0
     @Published var transcriptSearch = ""
     @Published var showNewRecording = false
     @Published var showNewFolder = false
