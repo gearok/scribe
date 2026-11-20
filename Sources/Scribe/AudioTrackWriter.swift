@@ -93,4 +93,3 @@ final class AudioTrackWriter: @unchecked Sendable {
         }
     }
 }
-
