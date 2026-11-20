@@ -27,12 +27,14 @@ struct RecordingSearchField: View {
     @Binding var text: String
     @Binding var focusRequest: Int
     let placeholder: String
+    var shortcutHint = "⌘K"
+    var usesToolbarBackground = false
     @State private var isFocused = false
 
     var body: some View {
         HStack(spacing: 4) {
             NativeRecordingSearchField(text: $text, isFocused: $isFocused,
-                                       focusRequest: focusRequest, placeholder: placeholder)
+                                       focusRequest: focusRequest, placeholder: placeholder, shortcutHint: shortcutHint)
             Button {
                 text = ""
                 focusRequest += 1
@@ -46,11 +48,20 @@ struct RecordingSearchField: View {
         }
         .padding(.leading, 12).padding(.trailing, 8)
         .frame(height: 30)
-        .background(Color(nsColor: .controlBackgroundColor), in: Capsule())
-        .overlay {
-            Capsule().strokeBorder(isFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12), lineWidth: 1)
-                .allowsHitTesting(false)
+        .background {
+            if drawsPill { Capsule().fill(Color(nsColor: .controlBackgroundColor)) }
         }
+        .overlay {
+            if drawsPill {
+                Capsule().strokeBorder(isFocused ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.12), lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var drawsPill: Bool {
+        if #available(macOS 26, *) { return !usesToolbarBackground }
+        return true
     }
 }
 
@@ -59,6 +70,7 @@ private struct NativeRecordingSearchField: NSViewRepresentable {
     @Binding var isFocused: Bool
     let focusRequest: Int
     let placeholder: String
+    let shortcutHint: String
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text, isFocused: $isFocused, focusRequest: focusRequest)
@@ -87,7 +99,8 @@ private struct NativeRecordingSearchField: NSViewRepresentable {
         context.coordinator.text = $text
         context.coordinator.isFocused = $isFocused
         if field.stringValue != text { field.stringValue = text }
-        field.placeholderString = placeholder + " (⌘K)"
+        (field.cell as? NSSearchFieldCell)?.cancelButtonCell = nil
+        field.placeholderString = placeholder + " (\(shortcutHint))"
         field.setAccessibilityLabel(placeholder)
         if context.coordinator.lastFocusRequest != focusRequest {
             context.coordinator.lastFocusRequest = focusRequest

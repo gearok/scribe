@@ -241,13 +241,18 @@ struct RecordingDetailView: View {
             if recording.status != .recording { PlaybackBar(player: model.playback, interfaceLanguage: model.interfaceLanguage).padding() }
         }
         .toolbar {
-            ToolbarItemGroup {
+            if #available(macOS 26, *) {
+                ToolbarSpacer(.flexible)
+            } else {
+                ToolbarItem(placement: .automatic) { Spacer() }
+            }
+            ToolbarItemGroup(placement: .primaryAction) {
                 Button(L10n.text("Speakers"), systemImage: "person.2") { model.showSpeakers = true }
                     .disabled(model.speakers.isEmpty).help(L10n.text("Manage Speakers"))
                 Button(L10n.text("Export Transcript"), systemImage: "square.and.arrow.up") { model.exportTranscript() }
                     .disabled(model.segments.isEmpty).help(L10n.text("Export Transcript"))
             }
-            ToolbarItem {
+            ToolbarItem(placement: .primaryAction) {
                 Menu(L10n.text("Recording Actions"), systemImage: "ellipsis") {
                     Button(L10n.text("Rename Recording"), systemImage: "pencil") { titleFocused = true }
                     if recording.status != .recording && recording.status != .processing {
@@ -256,6 +261,15 @@ struct RecordingDetailView: View {
                         }.disabled(model.isBusy || model.isDemo)
                     }
                 }.menuIndicator(.hidden)
+            }
+            if #available(macOS 26, *) {
+                ToolbarSpacer(.fixed, placement: .primaryAction)
+            }
+            ToolbarItem(id: "transcript-search", placement: .primaryAction) {
+                RecordingSearchField(text: $model.transcriptSearch, focusRequest: $model.transcriptSearchFocusRequest,
+                                     placeholder: L10n.text("Search Transcript"), shortcutHint: "⌘F", usesToolbarBackground: true)
+                    .frame(width: 260)
+                    .disabled(model.segments.isEmpty)
             }
         }
         .onAppear { title = recording.title }
@@ -420,7 +434,7 @@ private struct TranscriptParagraph: View {
                 // Keep Save and Cancel inside the editing region so Cancel never autosaves.
                 .background(OutsideClickObserver(onOutsideClick: saveEditing))
             } else {
-                Text(segment.text).font(.body).frame(maxWidth: .infinity, alignment: .leading)
+                Text(highlightedText).font(.body).frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .highPriorityGesture(TapGesture(count: 2).onEnded { beginEditing() })
                     .help(L10n.text("Double-click to edit this paragraph"))
@@ -438,6 +452,22 @@ private struct TranscriptParagraph: View {
             Button(L10n.text("Cancel"), role: .cancel) {}
             Button(L10n.text("Save")) { if let speaker = model.speaker(for: segment.speakerID) { model.renameSpeaker(speaker, name: name) } }
         } message: { Text(L10n.text("This name will appear throughout this recording.")) }
+    }
+
+    private var highlightedText: AttributedString {
+        var text = AttributedString(segment.text)
+        let query = model.transcriptSearch
+        guard !query.isEmpty else { return text }
+        var remaining = segment.text.startIndex..<segment.text.endIndex
+        while let match = segment.text.range(of: query, options: [.caseInsensitive, .diacriticInsensitive],
+                                            range: remaining, locale: .current) {
+            guard !match.isEmpty else { break }
+            if let range = Range(match, in: text) {
+                text[range].backgroundColor = .yellow.opacity(0.35)
+            }
+            remaining = match.upperBound..<segment.text.endIndex
+        }
+        return text
     }
 
     private func saveEditing() {

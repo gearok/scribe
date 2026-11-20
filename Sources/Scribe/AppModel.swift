@@ -16,6 +16,7 @@ final class AppModel: ObservableObject {
     @Published var search = ""
     @Published var searchFocusRequest = 0
     @Published var transcriptSearch = ""
+    @Published var transcriptSearchFocusRequest = 0
     @Published var showNewRecording = false
     @Published var showNewFolder = false
     @Published var showSettings = false

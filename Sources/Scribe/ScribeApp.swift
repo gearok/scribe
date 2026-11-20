@@ -111,6 +111,8 @@ struct ScribeApp: App {
             }
             CommandGroup(after: .textEditing) {
                 Button(L10n.text("Search")) { model.searchFocusRequest += 1 }.keyboardShortcut("k")
+                Button(L10n.text("Search Transcript")) { model.transcriptSearchFocusRequest += 1 }
+                    .keyboardShortcut("f").disabled(model.segments.isEmpty)
             }
         }
         MenuBarExtra {
