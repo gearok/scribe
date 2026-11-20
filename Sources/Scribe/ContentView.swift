@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var deleteTarget: Recording?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var recordingsColumnWidth: CGFloat = 340
 
     var body: some View {
         NavigationSplitView(columnVisibility: Binding(get: { columnVisibility }, set: {
@@ -16,14 +17,22 @@ struct ContentView: View {
         } content: {
             recordingsList
                 .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 480)
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { recordingsColumnWidth = $0 }
                 .toolbar {
-                    ToolbarItem(id: "import-audio") {
+                    if #available(macOS 26, *) {
+                        ToolbarItem(id: "folder-title", placement: .navigation) { folderTitle }
+                            .sharedBackgroundVisibility(.hidden)
+                    } else {
+                        ToolbarItem(id: "folder-title", placement: .navigation) { folderTitle }
+                    }
+                    // Keep library actions in this column even when the detail toolbar is empty.
+                    ToolbarItem(id: "import-audio", placement: .navigation) {
                         Button(L10n.text("Import Audio"), systemImage: "square.and.arrow.down") { model.importAudio() }
                             .labelStyle(.iconOnly)
                             .help(L10n.text("Import Audio"))
                             .disabled(model.isBusy || model.isDemo)
                     }
-                    ToolbarItem(id: "new-recording", placement: .primaryAction) {
+                    ToolbarItem(id: "new-recording", placement: .navigation) {
                         Button { model.showNewRecording = true } label: {
                             Image(nsImage: ScribeAssets.feather)
                         }
@@ -40,8 +49,9 @@ struct ContentView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .navigationTitle(L10n.text("Recordings"))
-        .navigationSubtitle(model.isDemo ? L10n.text("Sample library") : L10n.count(model.folderRecordings.count, noun: "recordings"))
+        .navigationTitle(model.selectedFolderTitle)
+        .navigationSubtitle(recordingsSubtitle)
+        .toolbar(removing: .title)
         .tint(.yellow)
         .frame(minWidth: 1080, minHeight: 560)
         .sheet(isPresented: $model.showNewRecording) { NewRecordingSheet() }
@@ -109,20 +119,10 @@ struct ContentView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    if let folder = model.selectedFolder {
-                        Circle().fill(folder.color.color).frame(width: 8, height: 8).accessibilityHidden(true)
-                    }
-                    Text(model.selectedFolderTitle).font(.headline).lineLimit(1)
-                        .accessibilityAddTraits(.isHeader)
-                    Spacer()
-                }
-                RecordingSearchField(text: $model.search, focusRequest: $model.searchFocusRequest,
-                                     placeholder: L10n.text("Search"))
-            }
-            .padding(.horizontal, 16).padding(.vertical, 12)
-            .background(Color(nsColor: .textBackgroundColor))
+            RecordingSearchField(text: $model.search, focusRequest: $model.searchFocusRequest,
+                                 placeholder: L10n.text("Search"))
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                .background(Color(nsColor: .textBackgroundColor))
         }
         .safeAreaInset(edge: .bottom) {
             if !model.modelsReady && !model.isDemo {
@@ -137,6 +137,22 @@ struct ContentView: View {
                 .ignoresSafeArea(.container, edges: .vertical)
                 .allowsHitTesting(false)
         }
+    }
+
+    private var recordingsSubtitle: String {
+        model.isDemo ? L10n.text("Sample library") : L10n.count(model.folderRecordings.count, noun: "recordings")
+    }
+
+    private var folderTitle: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(model.selectedFolderTitle).font(.headline).lineLimit(1)
+                .accessibilityAddTraits(.isHeader)
+            Text(recordingsSubtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .frame(minWidth: 0, maxWidth: 180, alignment: .leading)
+        // Reserve the trailing native button group and toolbar margins within this column.
+        .frame(width: columnVisibility == .all ? max(0, recordingsColumnWidth - 96) : nil, alignment: .leading)
+        .help(model.selectedFolderTitle)
     }
 
     private var groups: [RecordingGroup] {
