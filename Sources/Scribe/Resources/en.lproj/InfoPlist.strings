@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Scribe records your microphone so your voice is included in meeting recordings and local transcripts.";
+"NSAudioCaptureUsageDescription" = "Scribe records audio from your meeting application to create a private transcript on your Mac.";

@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Scribe записывает микрофон, чтобы ваш голос был включён в запись встречи и локальную расшифровку.";
+"NSAudioCaptureUsageDescription" = "Scribe записывает звук приложения встречи, чтобы создать расшифровку на вашем Mac.";

@@ -1,0 +1,83 @@
+name: Release DMG
+run-name: Release ${{ inputs.version_tag }} from main
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'New version tag, for example v1.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.version_tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+      VERSION_TAG: ${{ inputs.version_tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Validate version and reject an existing tag
+        run: |
+          ./scripts/package-dmg.sh "$VERSION_TAG" --validate-only
+          existing_ref="$(gh api "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$VERSION_TAG" \
+            --jq ".[] | select(.ref == \"refs/tags/$VERSION_TAG\") | .ref")"
+          if [[ -n "$existing_ref" ]]; then
+            echo "::error::Tag $VERSION_TAG already exists. Supply a new version."
+            exit 1
+          fi
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          xcodebuild -version
+          swift --version
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build and package Apple Silicon app
+        run: ./scripts/package-dmg.sh "$VERSION_TAG"
+
+      - name: Save DMG and checksum as workflow artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Scribe-${{ inputs.version_tag }}-arm64
+          path: |
+            build/Scribe-${{ inputs.version_tag }}-arm64.dmg
+            build/Scribe-${{ inputs.version_tag }}-arm64.dmg.sha256
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Tag the built commit and publish GitHub Release
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Requires an Apple Silicon Mac and macOS 15 or newer.
+
+          Open the DMG and drag Scribe into Applications. Download the transcription models once in Settings; recordings and transcription stay on your Mac.
+
+          This build is ad-hoc signed and is not notarized by Apple. macOS may require approval in System Settings → Privacy & Security before the first launch.
+          NOTES
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$VERSION_TAG" -f sha="$RELEASE_SHA" --silent
+          gh release create "$VERSION_TAG" \
+            "build/Scribe-$VERSION_TAG-arm64.dmg" \
+            "build/Scribe-$VERSION_TAG-arm64.dmg.sha256" \
+            --verify-tag --title "Scribe $VERSION_TAG" --generate-notes \
+            --notes-file "$RUNNER_TEMP/release-notes.md"

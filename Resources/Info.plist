@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>CFBundleName</key><string>Scribe</string>
+    <key>CFBundleDisplayName</key><string>Scribe</string>
+    <key>CFBundleIdentifier</key><string>app.scribe.mac</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleLocalizations</key><array><string>en</string><string>ru</string></array>
+    <key>CFBundleExecutable</key><string>Scribe</string>
+    <key>CFBundleIconFile</key><string>Scribe.icns</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>0.2.0</string>
+    <key>CFBundleVersion</key><string>2</string>
+    <key>LSMinimumSystemVersion</key><string>15.0</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSMicrophoneUsageDescription</key><string>Scribe records your microphone so your voice is included in meeting recordings and local transcripts.</string>
+    <key>NSAudioCaptureUsageDescription</key><string>Scribe records audio from your meeting application to create a private transcript on your Mac.</string>
+    <key>NSPrincipalClass</key><string>NSApplication</string>
+    <key>NSAccentColorName</key><string>AccentColor</string>
+</dict></plist>
