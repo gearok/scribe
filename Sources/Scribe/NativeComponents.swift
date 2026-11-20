@@ -3,7 +3,7 @@ import AppKit
 
 enum ScribeAssets {
     static let feather: NSImage = {
-        guard let url = Bundle.module.url(forResource: "Feather", withExtension: "pdf"),
+        guard let url = ScribeResources.bundle.url(forResource: "Feather", withExtension: "pdf"),
               let image = NSImage(contentsOf: url) else {
             preconditionFailure("The bundled feather symbol is missing.")
         }

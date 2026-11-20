@@ -52,7 +52,7 @@ swift test
 ./scripts/run.sh --demo
 ```
 
-The app bundle is written to `build/Scribe.app`. Demo mode uses a temporary library and does not change your recordings. The model integration test is opt-in through `SCRIBE_TEST_MODELS_DIR`; the regular test suite does not download models or record audio.
+The app bundle is written to `build/Scribe.app`. Each packaged build is copied to a temporary location and runs a resource check before it can be released, so development build paths cannot substitute for installed resources. Demo mode uses a temporary library and does not change your recordings. The model integration test is opt-in through `SCRIBE_TEST_MODELS_DIR`; the regular test suite does not download models or record audio.
 
 ## Publish a release
 

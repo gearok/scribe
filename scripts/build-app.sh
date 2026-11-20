@@ -12,12 +12,19 @@ build_dir="${SCRIBE_BUILD_DIR:-$PWD/build}"
 mkdir -p "$build_dir"
 build_dir="${build_dir:A}"
 sdk_version="$(xcrun --sdk macosx --show-sdk-version)"
+build_options=()
+if [[ -n "${SCRIBE_BUILD_SYSTEM:-}" ]]; then
+    build_options=(--build-system "$SCRIBE_BUILD_SYSTEM")
+fi
 # SwiftPM can otherwise emit the deployment target as the linked SDK version,
 # which puts AppKit's automatic toolbar appearance into compatibility mode.
-swift build -c "$configuration" -Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$sdk_version" \
+swift build "${build_options[@]}" -c "$configuration" -Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$sdk_version" \
     -Xlinker -rpath -Xlinker '@executable_path/../Frameworks'
-binary_dir="$(swift build -c "$configuration" --show-bin-path)"
+binary_dir="$(swift build "${build_options[@]}" -c "$configuration" --show-bin-path)"
 app_dir="$build_dir/Scribe.app"
+# Resource bundle layouts differ between SwiftPM build systems. Never merge an
+# older app bundle into the new build or leave stale resources in the package.
+rm -rf "$app_dir"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 sparkle_framework="$PWD/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
 mkdir -p "$app_dir/Contents/Frameworks"
@@ -41,4 +48,5 @@ for bundle in "$binary_dir"/*.bundle(N); do
     cp -R "$bundle" "$app_dir/Contents/Resources/"
 done
 codesign --force --sign - --entitlements Resources/Scribe.entitlements "$app_dir"
+./scripts/check-app.sh "$app_dir"
 echo "Built $app_dir"

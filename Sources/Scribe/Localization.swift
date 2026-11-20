@@ -20,7 +20,7 @@ enum InterfaceLanguage: String, CaseIterable, Identifiable {
 
 enum L10n {
     private static let bundles: [InterfaceLanguage: Bundle] = Dictionary(uniqueKeysWithValues: InterfaceLanguage.allCases.map { language in
-        let bundle = Bundle.module.path(forResource: language.rawValue, ofType: "lproj").flatMap(Bundle.init(path:)) ?? .module
+        let bundle = ScribeResources.bundle.path(forResource: language.rawValue, ofType: "lproj").flatMap(Bundle.init(path:)) ?? ScribeResources.bundle
         return (language, bundle)
     })
 
@@ -31,7 +31,7 @@ enum L10n {
     }
 
     static func bundle(for language: InterfaceLanguage) -> Bundle {
-        bundles[language] ?? .module
+        bundles[language] ?? ScribeResources.bundle
     }
 
     static func text(_ key: String, language: InterfaceLanguage? = nil) -> String {
