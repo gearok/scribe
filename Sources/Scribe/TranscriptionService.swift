@@ -134,6 +134,8 @@ actor TranscriptionService {
         await whisper.unloadModels()
         try Task.checkCancellation()
 
+        wordsByTrack = TranscriptDeduplicator.clean(wordsByTrack: wordsByTrack, turnsByTrack: turnsByTrack)
+        try Task.checkCancellation()
         var speakers: [ScribeCore.Speaker] = []
         var segments: [ScribeCore.TranscriptSegment] = []
         if let micWords = wordsByTrack[.microphone], !micWords.isEmpty {

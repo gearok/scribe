@@ -14,7 +14,10 @@ Scribe is a native macOS app for recording meetings and turning them into search
 1. **Record.** Scribe saves your microphone and meeting audio as separate tracks. You can also record only your microphone or import an audio file.
 2. **Find speakers.** After you stop recording, Scribe detects different voices in the meeting track. Your microphone is labeled “You”.
 3. **Turn speech into text.** Local models transcribe the speech in Russian, English, or automatic mixed-language mode. Speaker detection and transcription run one after another to keep memory use manageable.
-4. **Review.** The transcript appears with speaker labels and timestamps. Listen, assign names to speakers, edit the text, and export it. Overlapping voices may need manual correction.
+4. **Clean up overlaps.** Scribe removes matching passages recognized at overlapping times, including meeting audio picked up again by the microphone. It keeps the meeting track’s speaker-labeled copy and preserves words that do not match. Short replies and phrases repeated later are kept.
+5. **Review.** The transcript appears with speaker labels and timestamps. Listen, assign names to speakers, edit the text, and export it. Overlapping voices may need manual correction.
+
+Overlap cleanup runs during transcription. To apply it to an older recording, use **Transcribe Again**; this replaces the transcript and its manual edits after confirmation. Original audio tracks are kept.
 
 The models need a one-time internet download from Settings and several GB of free disk space. Meeting audio is never sent to a transcription service. Once the models are downloaded, processing works offline.
 
