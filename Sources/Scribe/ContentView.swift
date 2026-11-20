@@ -338,21 +338,41 @@ private struct TranscriptParagraph: View {
                 }.labelStyle(.iconOnly).menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             }
             if editing {
-                TextEditor(text: $editedText)
-                    .font(.body).frame(height: 120)
-                    .focused($editorFocused)
-                    .accessibilityLabel(L10n.text("Edit Transcript"))
-                    .onExitCommand { editing = false }
-                    .task { editorFocused = true }
-                HStack {
-                    Spacer()
-                    Button(L10n.text("Cancel"), role: .cancel) { editing = false }
-                    Button(L10n.text("Save")) {
-                        model.editText(segment, text: editedText)
-                        editing = false
+                VStack(alignment: .leading, spacing: 8) {
+                    ZStack(alignment: .topLeading) {
+                        // Match the editor's line wrapping, including an empty final line.
+                        Text(editedText + "\u{200B}")
+                            .font(.body)
+                            .padding(.horizontal, 5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .hidden().accessibilityHidden(true)
+                        TextEditor(text: $editedText)
+                            .font(.body)
+                            .scrollContentBackground(.hidden)
+                            .scrollDisabled(true)
+                            .focused($editorFocused)
+                            .accessibilityLabel(L10n.text("Edit Transcript"))
+                            .onExitCommand { editing = false }
+                            .task { editorFocused = true }
                     }
-                    .disabled(editedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .padding(8)
+                    .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(editorFocused ? Color.accentColor : Color(nsColor: .separatorColor), lineWidth: 1)
+                    }
+                    HStack {
+                        Spacer()
+                        Button(L10n.text("Cancel"), role: .cancel) { editing = false }
+                            .buttonStyle(.borderedProminent).tint(.gray)
+                        Button(L10n.text("Save")) { saveEditing() }
+                        .primaryActionStyle()
+                        .disabled(editedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
                 }
+                // Keep Save and Cancel inside the editing region so Cancel never autosaves.
+                .background(OutsideClickObserver(onOutsideClick: saveEditing))
             } else {
                 Text(segment.text).font(.body).frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -366,11 +386,20 @@ private struct TranscriptParagraph: View {
                     .accessibilityHidden(true)
             }
         }
+        .onDisappear { saveEditing() }
         .alert(L10n.text("Rename Speaker"), isPresented: $rename) {
             TextField(L10n.text("Name"), text: $name)
             Button(L10n.text("Cancel"), role: .cancel) {}
             Button(L10n.text("Save")) { if let speaker = model.speaker(for: segment.speakerID) { model.renameSpeaker(speaker, name: name) } }
         } message: { Text(L10n.text("This name will appear throughout this recording.")) }
+    }
+
+    private func saveEditing() {
+        guard editing else { return }
+        editing = false
+        if editedText.trimmingCharacters(in: .whitespacesAndNewlines) != segment.text {
+            model.editText(segment, text: editedText)
+        }
     }
 
     private func beginEditing() {

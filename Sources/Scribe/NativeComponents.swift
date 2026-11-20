@@ -48,6 +48,48 @@ struct RecordingListSelectionAppearance: NSViewRepresentable {
     }
 }
 
+/// Observe clicks without consuming them, so the clicked control still performs its action.
+struct OutsideClickObserver: NSViewRepresentable {
+    let onOutsideClick: () -> Void
+
+    func makeNSView(context: Context) -> ClickObservationView { ClickObservationView() }
+
+    func updateNSView(_ view: ClickObservationView, context: Context) {
+        view.onOutsideClick = onOutsideClick
+    }
+
+    static func dismantleNSView(_ view: ClickObservationView, coordinator: ()) {
+        view.stopObserving()
+    }
+
+    final class ClickObservationView: NSView {
+        var onOutsideClick: (() -> Void)?
+        private var monitor: Any?
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stopObserving()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                guard let self, let window = self.window, !self.isHiddenOrHasHiddenAncestor else { return event }
+                if event.window !== window || !self.bounds.contains(self.convert(event.locationInWindow, from: nil)) {
+                    self.onOutsideClick?()
+                }
+                return event
+            }
+        }
+
+        func stopObserving() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+        }
+
+        deinit { stopObserving() }
+    }
+}
+
 extension View {
     @ViewBuilder
     func primaryActionStyle() -> some View {
