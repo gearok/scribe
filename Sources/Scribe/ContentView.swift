@@ -75,12 +75,11 @@ struct ContentView: View {
     private var recordingsList: some View {
         List(selection: Binding(get: { model.selectedID }, set: { model.select($0) })) {
             ForEach(groups) { group in
-                if group.id != groups.first?.id {
-                    RecordingDateSeparator(day: group.day)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 24, bottom: 4, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .selectionDisabled()
-                }
+                RecordingDateSeparator(day: group.day)
+                    .listRowInsets(EdgeInsets(top: group.id == groups.first?.id ? 12 : 20,
+                                             leading: 8, bottom: 4, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .selectionDisabled()
                 ForEach(group.recordings) { recording in
                     RecordingRow(recording: recording, interfaceLanguage: model.interfaceLanguage, folder: model.folder(for: recording))
                         .draggable(RecordingDragItem(id: recording.id))
@@ -187,12 +186,11 @@ private struct RecordingDateSeparator: View {
     let day: Date
 
     var body: some View {
-        HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(day, format: .dateTime.day().month(.wide).year())
-                .font(.caption)
-                .foregroundStyle(Color(nsColor: .secondaryLabelColor))
-                .fixedSize()
-            VStack { Divider() }
+                .font(.title3.bold())
+                .foregroundStyle(.primary)
+            Divider()
         }
         .accessibilityAddTraits(.isHeader)
     }
