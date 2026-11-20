@@ -127,8 +127,8 @@ struct ScribeApp: App {
             Button(L10n.text("Settings")) { activate(); model.showSettings = true }
             Button(L10n.text("Quit Scribe")) { NSApplication.shared.terminate(nil) }
         } label: {
-            if model.recordingID != nil { Image(systemName: "record.circle.fill") }
-            else { Image(nsImage: ScribeAssets.feather) }
+            Image(nsImage: model.recordingID != nil ? ScribeAssets.recordingFeather : ScribeAssets.feather)
+                .accessibilityLabel(model.recordingID != nil ? "Scribe · " + L10n.text("Recording") : "Scribe")
         }
     }
 

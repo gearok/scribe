@@ -11,6 +11,24 @@ enum ScribeAssets {
         image.size = NSSize(width: 18, height: 18)
         return image
     }()
+
+    static let recordingFeather: NSImage = {
+        let image = NSImage(size: NSSize(width: 27, height: 18), flipped: false) { _ in
+            let symbol = NSRect(x: 0, y: 0, width: 18, height: 18)
+            NSGraphicsContext.saveGraphicsState()
+            feather.draw(in: symbol)
+            NSColor.labelColor.setFill()
+            symbol.fill(using: .sourceIn)
+            NSGraphicsContext.restoreGraphicsState()
+            NSColor.systemRed.setFill()
+            NSBezierPath(ovalIn: NSRect(x: 22, y: 6.5, width: 5, height: 5)).fill()
+            return true
+        }
+        // A template would turn the red dot monochrome with the rest of the icon.
+        image.isTemplate = false
+        image.cacheMode = .never
+        return image
+    }()
 }
 
 /// A template PDF lets native controls supply their own tint and vibrancy.
