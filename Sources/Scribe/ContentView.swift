@@ -308,6 +308,7 @@ private struct TranscriptParagraph: View {
     @State private var name = ""
     @State private var editing = false
     @State private var editedText = ""
+    @FocusState private var editorFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -322,15 +323,42 @@ private struct TranscriptParagraph: View {
                     .help(L10n.format("Play from %@", TimeLabel.clock(segment.start))).disabled(!model.playback.hasAudio)
                     .accessibilityValue(isActive ? L10n.text("Now Playing") : "")
                 Spacer()
+                Button(L10n.text("Copy Paragraph"), systemImage: "doc.on.doc") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(editing ? editedText : segment.text, forType: .string)
+                }
+                .labelStyle(.iconOnly).buttonStyle(.borderless)
+                .help(L10n.text("Copy Paragraph"))
                 Menu(L10n.text("Paragraph Actions"), systemImage: "ellipsis") {
-                    Button(L10n.text("Edit Text"), systemImage: "pencil") { editedText = segment.text; editing = true }
+                    Button(L10n.text("Edit Text"), systemImage: "pencil") { beginEditing() }
                     Menu(L10n.text("Assign Speaker")) {
                         ForEach(model.speakers) { speaker in Button(speaker.displayName) { model.reassign(segment, to: speaker) } }
                     }
                     Button(L10n.text("Play From Here"), systemImage: "play") { model.playback.playSegment(segment) }.disabled(!model.playback.hasAudio)
                 }.labelStyle(.iconOnly).menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             }
-            Text(segment.text).font(.body).frame(maxWidth: .infinity, alignment: .leading)
+            if editing {
+                TextEditor(text: $editedText)
+                    .font(.body).frame(height: 120)
+                    .focused($editorFocused)
+                    .accessibilityLabel(L10n.text("Edit Transcript"))
+                    .onExitCommand { editing = false }
+                    .task { editorFocused = true }
+                HStack {
+                    Spacer()
+                    Button(L10n.text("Cancel"), role: .cancel) { editing = false }
+                    Button(L10n.text("Save")) {
+                        model.editText(segment, text: editedText)
+                        editing = false
+                    }
+                    .disabled(editedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } else {
+                Text(segment.text).font(.body).frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(TapGesture(count: 2).onEnded { beginEditing() })
+                    .help(L10n.text("Double-click to edit this paragraph"))
+            }
         }
         .overlay(alignment: .leading) {
             if isActive {
@@ -343,17 +371,12 @@ private struct TranscriptParagraph: View {
             Button(L10n.text("Cancel"), role: .cancel) {}
             Button(L10n.text("Save")) { if let speaker = model.speaker(for: segment.speakerID) { model.renameSpeaker(speaker, name: name) } }
         } message: { Text(L10n.text("This name will appear throughout this recording.")) }
-        .sheet(isPresented: $editing) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(L10n.text("Edit Transcript")).font(.headline)
-                TextEditor(text: $editedText).frame(minHeight: 180)
-                HStack {
-                    Spacer()
-                    Button(L10n.text("Cancel"), role: .cancel) { editing = false }.keyboardShortcut(.cancelAction)
-                    Button(L10n.text("Save")) { model.editText(segment, text: editedText); editing = false }.keyboardShortcut(.defaultAction)
-                }
-            }.padding().frame(width: 520)
-        }
+    }
+
+    private func beginEditing() {
+        model.playback.pause()
+        editedText = segment.text
+        editing = true
     }
 }
 
