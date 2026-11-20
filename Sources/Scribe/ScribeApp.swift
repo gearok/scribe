@@ -86,7 +86,11 @@ struct ScribeApp: App {
                     }
                     #endif
                 }
-                .preferredColorScheme(snapshotColorScheme)
+                .preferredColorScheme(effectiveAppearance.colorScheme)
+                .onChange(of: effectiveAppearance, initial: true) { _, appearance in
+                    // Apply to AppKit panels, menus, and updater windows as well as SwiftUI.
+                    NSApplication.shared.appearance = appearance.nativeAppearance
+                }
         }
         .defaultSize(width: 1180, height: 790)
         .windowToolbarStyle(.unified)
@@ -128,16 +132,14 @@ struct ScribeApp: App {
         NSApplication.shared.windows.first { $0.canBecomeMain }?.makeKeyAndOrderFront(nil)
     }
 
-    private var snapshotColorScheme: ColorScheme? {
+    private var effectiveAppearance: AppAppearance {
         #if DEBUG
-        switch ProcessInfo.processInfo.environment["SCRIBE_APPEARANCE"] {
-        case "light": return .light
-        case "dark": return .dark
-        default: return nil
+        if let value = ProcessInfo.processInfo.environment["SCRIBE_APPEARANCE"],
+           let appearance = AppAppearance(rawValue: value) {
+            return appearance
         }
-        #else
-        return nil
         #endif
+        return model.appearance
     }
 }
 

@@ -60,6 +60,11 @@ struct SettingsSheet: View {
         VStack(spacing: 0) {
             Form {
                 Section(L10n.text("Interface")) {
+                    Picker(L10n.text("Appearance"), selection: $model.appearance) {
+                        ForEach(AppAppearance.allCases) { appearance in
+                            Text(L10n.text(appearance.label)).tag(appearance)
+                        }
+                    }
                     Picker(L10n.text("Interface Language"), selection: $model.interfaceLanguage) {
                         ForEach(InterfaceLanguage.allCases) { language in
                             Text(language.name).tag(language)

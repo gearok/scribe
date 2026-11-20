@@ -27,6 +27,7 @@ Download a DMG from [Releases](https://github.com/gearok/scribe/releases), open 
 Choose **Start Recording**, allow microphone and system-audio access, and stop when the meeting ends. Download the models in Settings if prompted. Headphones help keep other participants’ speech out of your microphone track.
 
 Settings are available from the Scribe system menu. The interface language and transcription language can be chosen separately.
+Choose **Light**, **Dark**, or **System** under **Settings → Interface → Appearance**. The choice applies immediately and is remembered. Light keeps the original design; System follows your Mac’s appearance.
 
 ## Updates
 

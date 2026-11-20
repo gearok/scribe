@@ -161,3 +161,7 @@
 "Automatically Check for Updates" = "Automatically Check for Updates";
 "Updates are paused while recording or processing." = "Updates are paused while recording or processing.";
 "Updates download from GitHub and are verified before installation. You choose when to install." = "Updates download from GitHub and are verified before installation. You choose when to install.";
+"Appearance" = "Appearance";
+"Light" = "Light";
+"Dark" = "Dark";
+"System" = "System";

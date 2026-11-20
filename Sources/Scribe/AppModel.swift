@@ -29,6 +29,9 @@ final class AppModel: ObservableObject {
     @Published var modelStep = ""
     @Published var modelProgress: Double?
     @Published var isImporting = false
+    @Published var appearance: AppAppearance = .saved() {
+        didSet { appearance.save() }
+    }
     @Published var interfaceLanguage: InterfaceLanguage = L10n.language {
         didSet { interfaceLanguage.save() }
     }

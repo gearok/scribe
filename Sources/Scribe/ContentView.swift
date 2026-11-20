@@ -92,9 +92,8 @@ struct ContentView: View {
         }
         .listStyle(.inset)
         .scrollContentBackground(.hidden)
-        .background(.white)
+        .background(Color(nsColor: .textBackgroundColor))
         .background(RecordingListSelectionAppearance())
-        .environment(\.colorScheme, .light)
         .overlay {
             if !model.search.isEmpty && model.filteredRecordings.isEmpty {
                 ContentUnavailableView.search(text: model.search)
