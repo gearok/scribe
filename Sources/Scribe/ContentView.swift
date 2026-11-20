@@ -4,10 +4,17 @@ import ScribeCore
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var deleteTarget: Recording?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
-        NavigationSplitView {
-            sidebar
+        NavigationSplitView(columnVisibility: Binding(get: { columnVisibility }, set: {
+            // Only the folders column can collapse; keep recordings beside the transcript.
+            columnVisibility = $0 == .detailOnly ? .doubleColumn : $0
+        })) {
+            FoldersSidebar()
+                .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
+        } content: {
+            recordingsList
                 .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 480)
                 .toolbar {
                     ToolbarItem(id: "import-audio") {
@@ -34,15 +41,15 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .navigationTitle(L10n.text("Recordings"))
-        .navigationSubtitle(model.isDemo ? L10n.text("Sample library") : L10n.count(model.recordings.count, noun: "recordings"))
+        .navigationSubtitle(model.isDemo ? L10n.text("Sample library") : L10n.count(model.folderRecordings.count, noun: "recordings"))
         .tint(.yellow)
-        .searchable(text: $model.search, placement: .toolbar, prompt: L10n.text("Search"))
-        .frame(minWidth: 860, minHeight: 560)
+        .frame(minWidth: 1080, minHeight: 560)
         .sheet(isPresented: $model.showNewRecording) { NewRecordingSheet() }
+        .sheet(isPresented: $model.showNewFolder) { NewFolderSheet() }
         .sheet(isPresented: $model.showSettings) { SettingsSheet() }
         .sheet(isPresented: $model.showSpeakers) { SpeakersSheet() }
         .alert(L10n.text("Scribe needs your attention"), isPresented: Binding(get: {
-            model.errorMessage != nil && !model.showSettings && !model.showNewRecording && !model.showSpeakers
+            model.errorMessage != nil && !model.showSettings && !model.showNewRecording && !model.showNewFolder && !model.showSpeakers
         }, set: { if !$0 { model.errorMessage = nil } })) {
             Button(L10n.text("OK")) { model.errorMessage = nil }
         } message: { Text(L10n.text(model.errorMessage ?? "")) }
@@ -55,7 +62,7 @@ struct ContentView: View {
         } message: { Text(L10n.text("The recording, audio, and transcript will be permanently removed from this Mac.")) }
     }
 
-    private var sidebar: some View {
+    private var recordingsList: some View {
         List(selection: Binding(get: { model.selectedID }, set: { model.select($0) })) {
             ForEach(groups) { group in
                 if group.id != groups.first?.id {
@@ -65,7 +72,8 @@ struct ContentView: View {
                         .selectionDisabled()
                 }
                 ForEach(group.recordings) { recording in
-                    RecordingRow(recording: recording, interfaceLanguage: model.interfaceLanguage)
+                    RecordingRow(recording: recording, interfaceLanguage: model.interfaceLanguage, folder: model.folder(for: recording))
+                        .draggable(RecordingDragItem(id: recording.id))
                         .tag(recording.id)
                         .listRowInsets(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 16))
                         .listRowBackground(Group {
@@ -80,6 +88,7 @@ struct ContentView: View {
                         .listRowSeparatorTint(Color(nsColor: .separatorColor))
                         .contextMenu {
                             Button(L10n.text("Open")) { model.select(recording.id) }
+                            RecordingFolderMenu(recording: recording)
                             Button(L10n.text("Show Audio in Finder"), systemImage: "folder") {
                                 NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: model.directory(for: recording).path)
                             }.disabled(model.isDemo)
@@ -98,6 +107,22 @@ struct ContentView: View {
             if !model.search.isEmpty && model.filteredRecordings.isEmpty {
                 ContentUnavailableView.search(text: model.search)
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    if let folder = model.selectedFolder {
+                        Circle().fill(folder.color.color).frame(width: 8, height: 8).accessibilityHidden(true)
+                    }
+                    Text(model.selectedFolderTitle).font(.headline).lineLimit(1)
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                }
+                RecordingSearchField(text: $model.search, placeholder: L10n.text("Search"))
+                    .frame(height: 28)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(Color(nsColor: .textBackgroundColor))
         }
         .safeAreaInset(edge: .bottom) {
             if !model.modelsReady && !model.isDemo {
@@ -160,6 +185,7 @@ private struct RecordingDateSeparator: View {
 private struct RecordingRow: View {
     let recording: Recording
     let interfaceLanguage: InterfaceLanguage
+    let folder: RecordingFolder?
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(recording.title).font(.headline).lineLimit(1)
@@ -169,10 +195,14 @@ private struct RecordingRow: View {
                 Text(L10n.text(recording.status == .ready ? recording.sourceName : recording.status.label, language: interfaceLanguage))
                     .foregroundStyle(Color(nsColor: .secondaryLabelColor)).lineLimit(1)
             }.font(.subheadline)
+            if let folder {
+                Label(folder.name, systemImage: "folder")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(recording.title), \(RecordingPresentation.dateAndTime(recording.createdAt)), \(L10n.text(recording.status.label)), \(TimeLabel.clock(recording.duration))")
+        .accessibilityLabel("\(recording.title), \(RecordingPresentation.dateAndTime(recording.createdAt)), \(L10n.text(recording.status.label)), \(TimeLabel.clock(recording.duration))\(folder.map { ", " + $0.name } ?? "")")
     }
 }
 

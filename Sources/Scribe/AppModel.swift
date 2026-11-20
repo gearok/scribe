@@ -7,12 +7,16 @@ import UniformTypeIdentifiers
 @MainActor
 final class AppModel: ObservableObject {
     @Published var recordings: [Recording] = []
+    @Published var folders: [RecordingFolder] = []
+    @Published var folderAssignments: [String: String] = [:]
+    @Published private(set) var selectedFolderID: String?
     @Published var selectedID: String?
     @Published var speakers: [Speaker] = []
     @Published var segments: [TranscriptSegment] = []
     @Published var search = ""
     @Published var transcriptSearch = ""
     @Published var showNewRecording = false
+    @Published var showNewFolder = false
     @Published var showSettings = false
     @Published var showSpeakers = false
     @Published var errorMessage: String?
@@ -52,8 +56,13 @@ final class AppModel: ObservableObject {
 
     var selectedRecording: Recording? { recordings.first { $0.id == selectedID } }
     var isBusy: Bool { recordingID != nil || processingID != nil || isStarting || isImporting }
+    var selectedFolder: RecordingFolder? { folders.first { $0.id == selectedFolderID } }
+    var selectedFolderTitle: String { selectedFolder?.name ?? L10n.text("All Recordings") }
+    var folderRecordings: [Recording] {
+        recordings.filter { selectedFolderID == nil || folderAssignments[$0.id] == selectedFolderID }
+    }
     var filteredRecordings: [Recording] {
-        recordings.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }
+        folderRecordings.filter { search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) }
     }
     var filteredSegments: [TranscriptSegment] {
         segments.filter {
@@ -107,7 +116,51 @@ final class AppModel: ObservableObject {
         rootDirectory.appendingPathComponent("Recordings").appendingPathComponent(recording.id)
     }
     func speaker(for id: String) -> Speaker? { speakers.first { $0.id == id } }
-    func reload() throws { recordings = try database?.recordings() ?? [] }
+    func reload() throws {
+        recordings = try database?.recordings() ?? []
+        folders = try database?.folders() ?? []
+        folderAssignments = try database?.folderAssignments() ?? [:]
+    }
+
+    func folder(for recording: Recording) -> RecordingFolder? {
+        folders.first { $0.id == folderAssignments[recording.id] }
+    }
+
+    func selectFolder(_ id: String?) {
+        guard id == nil || folders.contains(where: { $0.id == id }) else { return }
+        selectedFolderID = id
+        if !filteredRecordings.contains(where: { $0.id == selectedID }) {
+            select(filteredRecordings.first?.id)
+        }
+    }
+
+    @discardableResult
+    func createFolder(name: String, color: FolderColor) -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let database else { return false }
+        do {
+            let folder = RecordingFolder(name: name, color: color)
+            try database.saveFolder(folder)
+            try reload()
+            selectFolder(folder.id)
+            return true
+        } catch { errorMessage = error.localizedDescription; return false }
+    }
+
+    @discardableResult
+    func moveRecordings(_ ids: [String], toFolder folderID: String?) -> Bool {
+        guard !ids.isEmpty, let database,
+              folderID == nil || folders.contains(where: { $0.id == folderID }),
+              ids.allSatisfy({ id in recordings.contains { $0.id == id } }) else { return false }
+        do {
+            try database.moveRecordings(ids, toFolder: folderID)
+            folderAssignments = try database.folderAssignments()
+            if !folderRecordings.contains(where: { $0.id == selectedID }) {
+                select(filteredRecordings.first?.id)
+            }
+            return true
+        } catch { errorMessage = error.localizedDescription; return false }
+    }
 
     func select(_ id: String?) {
         selectedID = id
@@ -129,6 +182,7 @@ final class AppModel: ObservableObject {
 
     func startRecording(title: String, source: CaptureSource, language: MeetingLanguage) {
         guard !isBusy, !isDemo, let database else { return }
+        let destinationFolderID = selectedFolderID
         isStarting = true; playback.pause()
         Task { [self] in
             let date = Date()
@@ -137,6 +191,7 @@ final class AppModel: ObservableObject {
                                       status: .recording, language: language, sourceName: source.name, hasSystemAudio: source.id != -1)
             do {
                 try database.save(recording)
+                if let destinationFolderID { try database.moveRecordings([recording.id], toFolder: destinationFolderID) }
                 try await capture.start(directory: directory(for: recording), source: source) { [weak self] track, level in
                     Task { @MainActor in
                         if track == .microphone { self?.microphoneLevel = level } else { self?.systemLevel = level }
@@ -144,7 +199,7 @@ final class AppModel: ObservableObject {
                 }
                 recordingID = recording.id; startedAt = Date(); elapsed = 0
                 preventSleep()
-                try reload(); select(recording.id); showNewRecording = false
+                try reload(); selectFolder(destinationFolderID); select(recording.id); showNewRecording = false
             } catch {
                 recording.status = .failed; recording.errorMessage = error.localizedDescription
                 try? database.save(recording); try? reload(); select(recording.id)
@@ -266,12 +321,13 @@ final class AppModel: ObservableObject {
             let folder = directory(for: recording)
             if FileManager.default.fileExists(atPath: folder.path) { try FileManager.default.removeItem(at: folder) }
             try database?.delete(recordingID: recording.id)
-            try reload(); if selectedID == recording.id { select(recordings.first?.id) }
+            try reload(); if selectedID == recording.id { select(filteredRecordings.first?.id) }
         } catch { errorMessage = error.localizedDescription }
     }
 
     func importAudio() {
         guard !isBusy, !isDemo else { return }
+        let destinationFolderID = selectedFolderID
         let panel = NSOpenPanel()
         panel.title = L10n.text("Import Audio"); panel.prompt = L10n.text("Import Audio")
         panel.allowedContentTypes = [.audio, .mpeg4Audio, .wav, .mp3, .aiff]
@@ -298,7 +354,11 @@ final class AppModel: ObservableObject {
                     return duration
                 }.value
                 var imported = recording; imported.duration = duration
-                try database?.save(imported); try reload(); select(imported.id)
+                try database?.save(imported)
+                if let destinationFolderID { try database?.moveRecordings([imported.id], toFolder: destinationFolderID) }
+                try reload()
+                selectFolder(destinationFolderID)
+                select(imported.id)
                 isImporting = false
                 if modelsReady { process(imported) }
             } catch { isImporting = false; errorMessage = error.localizedDescription }
@@ -342,6 +402,10 @@ final class AppModel: ObservableObject {
 
     private func seedDemo() throws {
         guard let database else { return }
+        let work = RecordingFolder(name: "Работа", color: .blue)
+        let personal = RecordingFolder(name: "Личное", color: .green)
+        try database.saveFolder(work)
+        try database.saveFolder(personal)
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         func date(daysAgo: Int, hour: Int, minute: Int) -> Date {
@@ -364,6 +428,7 @@ final class AppModel: ObservableObject {
         ]
         let transcript = lines.map { TranscriptSegment(recordingID: meeting.id, speakerID: $0.0.id, start: $0.1, end: $0.1 + 12, text: $0.2, track: $0.0.isLocal ? .microphone : .system) }
         try database.saveTranscript(recording: meeting, speakers: [me, anna, max], segments: transcript)
+        try database.moveRecordings([meeting.id], toFolder: work.id)
         let examples: [(String, Int, Int, Int, String)] = [
             ("Обратная связь клиентов", 0, 11, 30, "Zoom"),
             ("Design catch-up", 1, 16, 0, "Google Meet"),
@@ -372,9 +437,12 @@ final class AppModel: ObservableObject {
             ("Интервью с пользователем", 2, 9, 30, "Microphone only"),
             ("Sprint review", 4, 12, 0, "Google Meet"),
         ]
-        for (title, daysAgo, hour, minute, source) in examples {
-            try database.save(Recording(title: title, createdAt: date(daysAgo: daysAgo, hour: hour, minute: minute),
-                                        duration: 1840, status: .captured, sourceName: source, hasMicrophone: false, hasSystemAudio: false))
+        for (index, example) in examples.enumerated() {
+            let (title, daysAgo, hour, minute, source) = example
+            let recording = Recording(title: title, createdAt: date(daysAgo: daysAgo, hour: hour, minute: minute),
+                                      duration: 1840, status: .captured, sourceName: source, hasMicrophone: false, hasSystemAudio: false)
+            try database.save(recording)
+            if index < 5 { try database.moveRecordings([recording.id], toFolder: index == 4 ? personal.id : work.id) }
         }
     }
 }

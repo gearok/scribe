@@ -92,7 +92,7 @@ struct ScribeApp: App {
                     NSApplication.shared.appearance = appearance.nativeAppearance
                 }
         }
-        .defaultSize(width: 1180, height: 790)
+        .defaultSize(width: 1280, height: 790)
         .windowToolbarStyle(.unified)
         .commands {
             CommandGroup(after: .appInfo) {
@@ -102,6 +102,7 @@ struct ScribeApp: App {
             CommandGroup(replacing: .newItem) {
                 Button(L10n.text("Start Recording")) { model.showNewRecording = true }.keyboardShortcut("n").disabled(model.isBusy || model.isDemo)
                 Button(L10n.text("Import Audio")) { model.importAudio() }.keyboardShortcut("o").disabled(model.isBusy || model.isDemo)
+                Button(L10n.text("New Folder")) { model.showNewFolder = true }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Divider()
                 Button(L10n.text("Export Transcript")) { model.exportTranscript() }.keyboardShortcut("e", modifiers: [.command, .shift]).disabled(model.segments.isEmpty)
             }

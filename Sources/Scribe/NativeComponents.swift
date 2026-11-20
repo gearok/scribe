@@ -21,6 +21,42 @@ struct FeatherSymbol: View {
     }
 }
 
+/// An inline native search field keeps search above the recordings column even
+/// when the separate folders sidebar is collapsed.
+struct RecordingSearchField: NSViewRepresentable {
+    @Binding var text: String
+    let placeholder: String
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+
+    func makeNSView(context: Context) -> NSSearchField {
+        let field = NSSearchField(string: text)
+        field.delegate = context.coordinator
+        field.sendsSearchStringImmediately = true
+        field.target = context.coordinator
+        field.action = #selector(Coordinator.searchChanged(_:))
+        return field
+    }
+
+    func updateNSView(_ field: NSSearchField, context: Context) {
+        context.coordinator.text = $text
+        if field.stringValue != text { field.stringValue = text }
+        field.placeholderString = placeholder
+        field.setAccessibilityLabel(placeholder)
+    }
+
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        var text: Binding<String>
+        init(text: Binding<String>) { self.text = text }
+
+        func controlTextDidChange(_ notification: Notification) {
+            if let field = notification.object as? NSSearchField { searchChanged(field) }
+        }
+
+        @objc func searchChanged(_ field: NSSearchField) { text.wrappedValue = field.stringValue }
+    }
+}
+
 /// Keep the Notes-style yellow selection when focus moves into the transcript. The native
 /// list still owns selection, keyboard navigation, accessibility, and context menus.
 struct RecordingListSelectionAppearance: NSViewRepresentable {

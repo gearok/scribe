@@ -25,4 +25,10 @@
     <key>NSAudioCaptureUsageDescription</key><string>Scribe records audio from your meeting application to create a private transcript on your Mac.</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSAccentColorName</key><string>AccentColor</string>
+    <key>UTExportedTypeDeclarations</key>
+    <array><dict>
+        <key>UTTypeIdentifier</key><string>app.scribe.recording</string>
+        <key>UTTypeDescription</key><string>Scribe Recording</string>
+        <key>UTTypeConformsTo</key><array><string>public.data</string></array>
+    </dict></array>
 </dict></plist>
