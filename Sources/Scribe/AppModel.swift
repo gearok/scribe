@@ -104,6 +104,10 @@ final class AppModel: ObservableObject {
             select(selectedID)
         } catch { errorMessage = error.localizedDescription }
         Task { modelsReady = await transcription.isPrepared() }
+    }
+
+    private func startRecordingTimer() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, let startedAt = self.startedAt else { return }
@@ -200,6 +204,7 @@ final class AppModel: ObservableObject {
                     }
                 }
                 recordingID = recording.id; startedAt = Date(); elapsed = 0
+                startRecordingTimer()
                 preventSleep()
                 try reload(); selectFolder(destinationFolderID); select(recording.id); showNewRecording = false
             } catch {
@@ -222,6 +227,7 @@ final class AppModel: ObservableObject {
             recording.status = .failed; recording.duration = elapsed; recording.errorMessage = error.localizedDescription
             try? database?.save(recording); errorMessage = error.localizedDescription
         }
+        timer?.invalidate(); timer = nil
         recordingID = nil; startedAt = nil; microphoneLevel = 0; systemLevel = 0
         allowSleep()
         do { try reload(); select(id) } catch { errorMessage = error.localizedDescription }
@@ -342,18 +348,7 @@ final class AppModel: ObservableObject {
         Task {
             do {
                 let duration = try await Task.detached(priority: .userInitiated) {
-                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-                    let input = try AVAudioFile(forReading: source)
-                    let writer = try AudioTrackWriter(url: folder.appendingPathComponent("system.caf"), startHostTime: 1, meter: { _ in })
-                    guard let buffer = AVAudioPCMBuffer(pcmFormat: input.processingFormat, frameCapacity: 32_768) else { throw ScribeError.message("Could not open this audio file.") }
-                    while input.framePosition < input.length {
-                        let offset = Double(input.framePosition) / input.processingFormat.sampleRate
-                        try input.read(into: buffer)
-                        writer.append(buffer, hostTime: 1 + AVAudioTime.hostTime(forSeconds: offset))
-                    }
-                    let duration = Double(input.length) / input.processingFormat.sampleRate
-                    try writer.finish(duration: duration)
-                    return duration
+                    try AudioImporter.convert(source: source, directory: folder)
                 }.value
                 var imported = recording; imported.duration = duration
                 try database?.save(imported)
@@ -392,6 +387,7 @@ final class AppModel: ObservableObject {
                 recording.duration = elapsed; recording.status = .interrupted; recording.errorMessage = error.localizedDescription
                 try? database?.save(recording)
             }
+            timer?.invalidate(); timer = nil
             recordingID = nil; startedAt = nil
         }
         processingTask?.cancel(); modelsTask?.cancel(); allowSleep()

@@ -14,7 +14,10 @@ final class PlaybackController: ObservableObject {
     private var timer: Timer?
     private var recordingID: String?
 
-    init() {
+    deinit { timer?.invalidate() }
+
+    private func startTimer() {
+        guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.tick() }
         }
@@ -24,13 +27,15 @@ final class PlaybackController: ObservableObject {
         guard recording?.id != recordingID else { return }
         pause(); players = []; position = 0; duration = recording?.duration ?? 0; recordingID = nil
         guard let recording, let directory else { return }
+        var loaded: [AVAudioPlayer] = []
         for track in [AudioTrack.system, .microphone] {
             let url = directory.appendingPathComponent(track.filename)
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             let player = try AVAudioPlayer(contentsOf: url)
             player.enableRate = true; player.rate = rate; player.prepareToPlay()
-            players.append(player)
+            loaded.append(player)
         }
+        players = loaded
         duration = max(duration, players.map(\.duration).max() ?? 0)
         recordingID = recording.id
     }
@@ -45,8 +50,13 @@ final class PlaybackController: ObservableObject {
         let when = first.deviceCurrentTime + 0.08
         players.forEach { _ = $0.play(atTime: when) }
         isPlaying = true
+        startTimer()
     }
-    func pause() { players.forEach { $0.pause() }; isPlaying = false }
+    func pause() {
+        timer?.invalidate(); timer = nil
+        players.forEach { $0.pause() }
+        isPlaying = false
+    }
     func seek(to value: Double) {
         position = min(max(0, value), duration)
         let playing = isPlaying
@@ -58,6 +68,6 @@ final class PlaybackController: ObservableObject {
     private func tick() {
         guard isPlaying else { return }
         position = players.map(\.currentTime).max() ?? 0
-        if !players.contains(where: \.isPlaying) { isPlaying = false; position = duration }
+        if !players.contains(where: \.isPlaying) { pause(); position = duration }
     }
 }

@@ -5,6 +5,30 @@ import ScribeCore
 
 @MainActor
 final class PlaybackTests: XCTestCase {
+    func testFailedSecondTrackDoesNotLeavePartialPlaybackLoaded() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-playback-failure-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let format = AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 16_000)!
+        buffer.frameLength = buffer.frameCapacity
+        buffer.floatChannelData![0].initialize(repeating: 0, count: Int(buffer.frameLength))
+        do {
+            let file = try AVAudioFile(forWriting: directory.appendingPathComponent("system.caf"), settings: format.settings)
+            try file.write(from: buffer)
+        }
+        try Data("invalid audio".utf8).write(to: directory.appendingPathComponent("microphone.caf"))
+        let player = PlaybackController()
+        let recording = Recording(title: "Broken microphone", duration: 1)
+        XCTAssertThrowsError(try player.load(recording, directory: directory))
+        XCTAssertFalse(player.hasAudio)
+        player.play()
+        XCTAssertFalse(player.isPlaying)
+        try FileManager.default.removeItem(at: directory.appendingPathComponent("microphone.caf"))
+        try player.load(recording, directory: directory)
+        XCTAssertTrue(player.hasAudio)
+    }
+
     func testParagraphPlaybackSeekingAndPausingDriveTheHighlight() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-playback-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
