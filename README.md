@@ -22,7 +22,15 @@ The models need a one-time internet download from Settings and several GB of fre
 
 Requires an **Apple Silicon Mac with macOS 15 or newer**. Liquid Glass controls are used on macOS 26 and newer.
 
-Download a DMG from [Releases](https://github.com/gearok/scribe/releases), open it, and drag Scribe into Applications. Current packages are ad-hoc signed and **not notarized by Apple**; macOS may require approval in **System Settings → Privacy & Security** before the first launch.
+Download a DMG from [Releases](https://github.com/gearok/scribe/releases), open it, and drag Scribe into Applications. Current packages are ad-hoc signed and **not notarized by Apple**, so macOS may block the first launch with “Apple could not verify Scribe is free of malware.”
+
+For a release you trust from this repository:
+
+1. Open Scribe from **Applications**. If macOS blocks it, choose **Done** rather than Move to Trash.
+2. Open **System Settings → Privacy & Security**, scroll to Security, and click **Open Anyway** next to Scribe.
+3. Confirm **Open** and authenticate if macOS asks. Scribe can then launch normally.
+
+This is Apple’s [documented way to approve an unnotarized app](https://support.apple.com/en-us/102445). Sparkle’s update signatures verify downloaded updates; they do not replace Apple notarization.
 
 Choose **Start Recording**, allow microphone and system-audio access, and stop when the meeting ends. Download the models in Settings if prompted. Headphones help keep other participants’ speech out of your microphone track.
 
