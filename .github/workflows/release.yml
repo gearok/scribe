@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.version_tag }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
@@ -45,15 +45,40 @@ jobs:
             echo "::error::Tag $VERSION_TAG already exists. Supply a new version."
             exit 1
           fi
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .tag_name' > "$RUNNER_TEMP/release-tags.txt"
+          python3 - <<'PY'
+          import os, pathlib, re
+          candidate = tuple(map(int, os.environ['VERSION_TAG'][1:].split('.')))
+          tags = pathlib.Path(os.environ['RUNNER_TEMP'], 'release-tags.txt').read_text().splitlines()
+          for tag in tags:
+              if re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', tag):
+                  if tuple(map(int, tag[1:].split('.'))) >= candidate:
+                      raise SystemExit(f'Supply a version newer than published release {tag}.')
+          PY
           echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
           xcodebuild -version
           swift --version
+
+      - name: Require the update signing key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$SPARKLE_PRIVATE_KEY" ]]; then
+            echo "::error::Configure the SPARKLE_PRIVATE_KEY repository secret before releasing."
+            exit 1
+          fi
 
       - name: Run tests
         run: swift test
 
       - name: Build and package Apple Silicon app
         run: ./scripts/package-dmg.sh "$VERSION_TAG"
+
+      - name: Generate signed update feed
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./scripts/generate-appcast.sh "$VERSION_TAG"
 
       - name: Save DMG and checksum as workflow artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -62,6 +87,7 @@ jobs:
           path: |
             build/Scribe-${{ inputs.version_tag }}-arm64.dmg
             build/Scribe-${{ inputs.version_tag }}-arm64.dmg.sha256
+            build/appcast.xml
           if-no-files-found: error
           compression-level: 0
 
@@ -79,5 +105,6 @@ jobs:
           gh release create "$VERSION_TAG" \
             "build/Scribe-$VERSION_TAG-arm64.dmg" \
             "build/Scribe-$VERSION_TAG-arm64.dmg.sha256" \
-            --verify-tag --title "Scribe $VERSION_TAG" --generate-notes \
+            "build/appcast.xml" \
+            --verify-tag --latest --title "Scribe $VERSION_TAG" --generate-notes \
             --notes-file "$RUNNER_TEMP/release-notes.md"

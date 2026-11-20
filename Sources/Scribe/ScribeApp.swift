@@ -5,6 +5,7 @@ import AppKit
 struct ScribeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
+    @StateObject private var updates = AppUpdater()
     @Environment(\.openWindow) private var openWindow
 
     init() {
@@ -13,10 +14,11 @@ struct ScribeApp: App {
 
     var body: some Scene {
         Window("Scribe", id: "main") {
-            ContentView().environmentObject(model)
+            ContentView().environmentObject(model).environmentObject(updates)
                 .environment(\.locale, model.interfaceLanguage.locale)
                 .onAppear {
                     delegate.model = model
+                    updates.start(model: model)
                     #if DEBUG
                     if model.isDemo,
                        let value = ProcessInfo.processInfo.environment["SCRIBE_PREVIEW_PLAYBACK_POSITION"],
@@ -90,6 +92,10 @@ struct ScribeApp: App {
         .defaultSize(width: 1180, height: 790)
         .windowToolbarStyle(.unified)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button(L10n.text("Check for Updates")) { updates.checkForUpdates() }
+                    .disabled(!updates.isEnabled || !updates.canCheckForUpdates || updates.isBusy)
+            }
             CommandGroup(replacing: .newItem) {
                 Button(L10n.text("Start Recording")) { model.showNewRecording = true }.keyboardShortcut("n").disabled(model.isBusy || model.isDemo)
                 Button(L10n.text("Import Audio")) { model.importAudio() }.keyboardShortcut("o").disabled(model.isBusy || model.isDemo)

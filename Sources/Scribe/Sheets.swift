@@ -53,6 +53,7 @@ struct NewRecordingSheet: View {
 
 struct SettingsSheet: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var updates: AppUpdater
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -88,13 +89,24 @@ struct SettingsSheet: View {
                         Button(L10n.text("Show in Finder")) { model.revealLibrary() }
                     }
                 }
+                Section(L10n.text("Updates")) {
+                    LabeledContent(L10n.text("Version"), value: AppUpdater.version)
+                    Toggle(L10n.text("Automatically Check for Updates"), isOn: Binding(
+                        get: { updates.automaticallyChecksForUpdates },
+                        set: { updates.setAutomaticallyChecksForUpdates($0) }
+                    )).disabled(!updates.isEnabled)
+                    Button(L10n.text("Check for Updates")) { updates.checkForUpdates() }
+                        .disabled(!updates.isEnabled || !updates.canCheckForUpdates || updates.isBusy)
+                    Text(L10n.text(updates.isBusy ? "Updates are paused while recording or processing." : "Updates download from GitHub and are verified before installation. You choose when to install."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
                 Section {
                     Label(L10n.text("Audio, transcripts, and speaker names stay on this Mac."), systemImage: "lock.shield")
                         .foregroundStyle(.secondary)
                 }
             }.formStyle(.grouped)
             HStack {
-                Text(L10n.text("Scribe 0.2")).font(.caption).foregroundStyle(.secondary)
+                Text("Scribe \(AppUpdater.version)").font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(L10n.text("Done")) { dismiss() }.keyboardShortcut(.defaultAction)
             }.padding()

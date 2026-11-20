@@ -14,10 +14,15 @@ build_dir="${build_dir:A}"
 sdk_version="$(xcrun --sdk macosx --show-sdk-version)"
 # SwiftPM can otherwise emit the deployment target as the linked SDK version,
 # which puts AppKit's automatic toolbar appearance into compatibility mode.
-swift build -c "$configuration" -Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$sdk_version"
+swift build -c "$configuration" -Xlinker -platform_version -Xlinker macos -Xlinker 15.0 -Xlinker "$sdk_version" \
+    -Xlinker -rpath -Xlinker '@executable_path/../Frameworks'
 binary_dir="$(swift build -c "$configuration" --show-bin-path)"
 app_dir="$build_dir/Scribe.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
+sparkle_framework="$PWD/.build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+mkdir -p "$app_dir/Contents/Frameworks"
+# Keep Sparkle's signed helpers, framework symlinks, and executable permissions intact.
+ditto "$sparkle_framework" "$app_dir/Contents/Frameworks/Sparkle.framework"
 cp "$binary_dir/Scribe" "$app_dir/Contents/MacOS/Scribe"
 cp Resources/Info.plist "$app_dir/Contents/Info.plist"
 if [[ -n "$app_version" ]]; then

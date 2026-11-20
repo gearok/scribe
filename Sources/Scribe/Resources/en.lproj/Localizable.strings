@@ -155,3 +155,9 @@
 "recordings.few" = "%ld recordings";
 "recordings.many" = "%ld recordings";
 "recordings.one" = "%ld recording";
+"Check for Updates" = "Check for Updates";
+"Updates" = "Updates";
+"Version" = "Version";
+"Automatically Check for Updates" = "Automatically Check for Updates";
+"Updates are paused while recording or processing." = "Updates are paused while recording or processing.";
+"Updates download from GitHub and are verified before installation. You choose when to install." = "Updates download from GitHub and are verified before installation. You choose when to install.";

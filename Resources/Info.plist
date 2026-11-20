@@ -10,7 +10,15 @@
     <key>CFBundleIconFile</key><string>Scribe.icns</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>0.2.0</string>
-    <key>CFBundleVersion</key><string>2</string>
+    <key>CFBundleVersion</key><string>0.2.0</string>
+    <key>SUFeedURL</key><string>https://github.com/gearok/scribe/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>DFiM48zNmxNM6HSKGK7xNApEdjBUYD3KIinMzch180A=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUAutomaticallyUpdate</key><false/>
+    <key>SUAllowsAutomaticUpdates</key><false/>
+    <key>SUEnableSystemProfiling</key><false/>
+    <key>SUVerifyUpdateBeforeExtraction</key><true/>
+    <key>SURequireSignedFeed</key><true/>
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSMicrophoneUsageDescription</key><string>Scribe records your microphone so your voice is included in meeting recordings and local transcripts.</string>
