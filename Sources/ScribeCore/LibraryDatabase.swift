@@ -28,7 +28,57 @@ public final class LibraryDatabase: @unchecked Sendable {
             try db.create(index: "segments_by_recording", on: "segments", columns: ["recordingID", "start"])
             try db.create(index: "speakers_by_recording", on: "speakers", columns: ["recordingID"])
         }
+        migrator.registerMigration("folders-v1") { db in
+            try db.create(table: "folders") { t in
+                t.column("id", .text).primaryKey()
+                t.column("name", .text).notNull()
+                t.column("color", .text).notNull()
+            }
+            // Keep organization separate from recording payloads, so processing an existing
+            // recording can never overwrite a folder move made while it was running.
+            try db.create(table: "recording_folders") { t in
+                t.column("recordingID", .text).primaryKey().references("recordings", onDelete: .cascade)
+                t.column("folderID", .text).notNull().references("folders", onDelete: .cascade)
+            }
+            try db.create(index: "recordings_by_folder", on: "recording_folders", columns: ["folderID"])
+        }
         try migrator.migrate(queue)
+    }
+
+    public func folders() throws -> [RecordingFolder] {
+        try queue.read { db in
+            try Row.fetchAll(db, sql: "SELECT id, name, color FROM folders ORDER BY rowid").map { row in
+                RecordingFolder(id: row["id"], name: row["name"], color: FolderColor(rawValue: row["color"]) ?? .gray)
+            }
+        }
+    }
+
+    public func saveFolder(_ folder: RecordingFolder) throws {
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO folders (id, name, color) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, color=excluded.color",
+                           arguments: [folder.id, folder.name, folder.color.rawValue])
+        }
+    }
+
+    public func folderAssignments() throws -> [String: String] {
+        try queue.read { db in
+            Dictionary(uniqueKeysWithValues: try Row.fetchAll(db, sql: "SELECT recordingID, folderID FROM recording_folders").map {
+                ($0["recordingID"] as String, $0["folderID"] as String)
+            })
+        }
+    }
+
+    public func moveRecordings(_ ids: [String], toFolder folderID: String?) throws {
+        try queue.write { db in
+            for id in Set(ids) {
+                if let folderID {
+                    try db.execute(sql: "INSERT INTO recording_folders (recordingID, folderID) VALUES (?, ?) ON CONFLICT(recordingID) DO UPDATE SET folderID=excluded.folderID",
+                                   arguments: [id, folderID])
+                } else {
+                    try db.execute(sql: "DELETE FROM recording_folders WHERE recordingID=?", arguments: [id])
+                }
+            }
+        }
     }
 
     public func recordings() throws -> [Recording] {

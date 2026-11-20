@@ -1,5 +1,21 @@
 import Foundation
 
+public enum FolderColor: String, Codable, CaseIterable, Sendable {
+    case red, orange, yellow, green, blue, purple, pink, gray
+    public var label: String { rawValue.capitalized }
+}
+
+/// Folders are deliberately flat: recordings can belong to one folder, and folders have no parent.
+public struct RecordingFolder: Identifiable, Codable, Equatable, Sendable {
+    public var id: String
+    public var name: String
+    public var color: FolderColor
+
+    public init(id: String = UUID().uuidString, name: String, color: FolderColor) {
+        self.id = id; self.name = name; self.color = color
+    }
+}
+
 public enum RecordingStatus: String, Codable, Sendable {
     case recording, captured, processing, ready, failed, interrupted
     public var label: String {
