@@ -5,7 +5,6 @@ struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var deleteTarget: Recording?
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
-    @State private var recordingsColumnWidth: CGFloat = 340
 
     var body: some View {
         NavigationSplitView(columnVisibility: Binding(get: { columnVisibility }, set: {
@@ -17,13 +16,14 @@ struct ContentView: View {
         } content: {
             recordingsList
                 .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 480)
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { recordingsColumnWidth = $0 }
                 .toolbar {
                     if #available(macOS 26, *) {
                         ToolbarItem(id: "folder-title", placement: .navigation) { folderTitle }
                             .sharedBackgroundVisibility(.hidden)
+                        ToolbarSpacer(.flexible, placement: .navigation)
                     } else {
                         ToolbarItem(id: "folder-title", placement: .navigation) { folderTitle }
+                        ToolbarItem(id: "folder-title-spacer", placement: .navigation) { Spacer() }
                     }
                     // Keep library actions in this column even when the detail toolbar is empty.
                     ToolbarItem(id: "import-media", placement: .navigation) {
@@ -149,8 +149,6 @@ struct ContentView: View {
             Text(recordingsSubtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
         }
         .frame(minWidth: 0, maxWidth: 180, alignment: .leading)
-        // Reserve the trailing native button group and toolbar margins within this column.
-        .frame(width: columnVisibility == .all ? max(0, recordingsColumnWidth - 96) : nil, alignment: .leading)
         .help(model.selectedFolderTitle)
     }
 
