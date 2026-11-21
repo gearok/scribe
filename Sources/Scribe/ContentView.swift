@@ -164,12 +164,20 @@ struct ContentView: View {
             Label { Text(L10n.text("No Recording Selected")) } icon: { FeatherSymbol().frame(width: 48, height: 48) }
         } description: {
             Text(L10n.text("Record a meeting or import audio or video to create a private transcript on your Mac."))
+                .multilineTextAlignment(.center)
         } actions: {
-            Button(L10n.text("Start Recording"), systemImage: "mic") { model.showNewRecording = true }
-                .primaryActionStyle().disabled(model.isBusy || model.isDemo)
-            Button(L10n.text("Import Audio or Video")) { model.importMedia() }.disabled(model.isBusy || model.isDemo)
-            if model.isImporting { ProgressView(L10n.text("Importing media…")) }
+            VStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    Button(L10n.text("Start Recording"), systemImage: "mic") { model.showNewRecording = true }
+                        .primaryActionStyle().disabled(model.isBusy || model.isDemo)
+                    Button(L10n.text("Import Audio or Video")) { model.importMedia() }
+                        .disabled(model.isBusy || model.isDemo)
+                }
+                if model.isImporting { ProgressView(L10n.text("Importing media…")) }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
 }
