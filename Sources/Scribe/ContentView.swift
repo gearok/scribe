@@ -26,10 +26,10 @@ struct ContentView: View {
                         ToolbarItem(id: "folder-title", placement: .navigation) { folderTitle }
                     }
                     // Keep library actions in this column even when the detail toolbar is empty.
-                    ToolbarItem(id: "import-audio", placement: .navigation) {
-                        Button(L10n.text("Import Audio"), systemImage: "square.and.arrow.down") { model.importAudio() }
+                    ToolbarItem(id: "import-media", placement: .navigation) {
+                        Button(L10n.text("Import Audio or Video"), systemImage: "square.and.arrow.down") { model.importMedia() }
                             .labelStyle(.iconOnly)
-                            .help(L10n.text("Import Audio"))
+                            .help(L10n.text("Import Audio or Video"))
                             .disabled(model.isBusy || model.isDemo)
                     }
                     ToolbarItem(id: "new-recording", placement: .navigation) {
@@ -165,12 +165,12 @@ struct ContentView: View {
         ContentUnavailableView {
             Label { Text(L10n.text("No Recording Selected")) } icon: { FeatherSymbol().frame(width: 48, height: 48) }
         } description: {
-            Text(L10n.text("Record a meeting or import audio to create a private transcript on your Mac."))
+            Text(L10n.text("Record a meeting or import audio or video to create a private transcript on your Mac."))
         } actions: {
             Button(L10n.text("Start Recording"), systemImage: "mic") { model.showNewRecording = true }
                 .primaryActionStyle().disabled(model.isBusy || model.isDemo)
-            Button(L10n.text("Import Audio")) { model.importAudio() }.disabled(model.isBusy || model.isDemo)
-            if model.isImporting { ProgressView(L10n.text("Importing audio…")) }
+            Button(L10n.text("Import Audio or Video")) { model.importMedia() }.disabled(model.isBusy || model.isDemo)
+            if model.isImporting { ProgressView(L10n.text("Importing media…")) }
         }
     }
 

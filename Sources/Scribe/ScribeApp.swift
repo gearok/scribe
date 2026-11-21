@@ -101,7 +101,7 @@ struct ScribeApp: App {
             }
             CommandGroup(replacing: .newItem) {
                 Button(L10n.text("Start Recording")) { model.showNewRecording = true }.keyboardShortcut("n").disabled(model.isBusy || model.isDemo)
-                Button(L10n.text("Import Audio")) { model.importAudio() }.keyboardShortcut("o").disabled(model.isBusy || model.isDemo)
+                Button(L10n.text("Import Audio or Video")) { model.importMedia() }.keyboardShortcut("o").disabled(model.isBusy || model.isDemo)
                 Button(L10n.text("New Folder")) { model.showNewFolder = true }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Divider()
                 Button(L10n.text("Export Transcript")) { model.exportTranscript() }.keyboardShortcut("e", modifiers: [.command, .shift]).disabled(model.segments.isEmpty)

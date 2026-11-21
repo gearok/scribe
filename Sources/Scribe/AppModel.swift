@@ -333,22 +333,22 @@ final class AppModel: ObservableObject {
         } catch { errorMessage = error.localizedDescription }
     }
 
-    func importAudio() {
+    func importMedia() {
         guard !isBusy, !isDemo else { return }
         let destinationFolderID = selectedFolderID
         let panel = NSOpenPanel()
-        panel.title = L10n.text("Import Audio"); panel.prompt = L10n.text("Import Audio")
-        panel.allowedContentTypes = [.audio, .mpeg4Audio, .wav, .mp3, .aiff]
+        panel.title = L10n.text("Import Audio or Video"); panel.prompt = L10n.text("Import")
+        panel.allowedContentTypes = [.audio, .movie, .video]
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let source = panel.url else { return }
         isImporting = true
         let recording = Recording(title: source.deletingPathExtension().lastPathComponent, language: defaultLanguage,
-                                  sourceName: "Imported audio", hasMicrophone: false, hasSystemAudio: true)
+                                  sourceName: "Imported media", hasMicrophone: false, hasSystemAudio: true)
         let folder = directory(for: recording)
         Task {
             do {
                 let duration = try await Task.detached(priority: .userInitiated) {
-                    try AudioImporter.convert(source: source, directory: folder)
+                    try await AudioImporter.convert(source: source, directory: folder)
                 }.value
                 var imported = recording; imported.duration = duration
                 try database?.save(imported)

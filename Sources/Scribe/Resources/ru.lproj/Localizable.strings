@@ -8,6 +8,8 @@
 "Cancel" = "Отмена";
 "Cancel Processing" = "Отменить обработку";
 "Could not open this audio file." = "Не удалось открыть аудиофайл.";
+"Could not open this audio or video file." = "Не удалось открыть аудио- или видеофайл.";
+"Could not read the imported audio." = "Не удалось прочитать импортированное аудио.";
 "Could not read the recorded audio." = "Не удалось прочитать записанное аудио.";
 "Create a transcript with individual speaker labels." = "Создайте расшифровку с разделением по участникам.";
 "Create the system audio input" = "Создание входа системного аудио";
@@ -27,8 +29,12 @@
 "Finishing your transcript" = "Завершение расшифровки";
 "Identifying individual speakers" = "Определение участников";
 "Import Audio" = "Импортировать аудио";
+"Import Audio or Video" = "Импортировать аудио или видео";
+"Import" = "Импортировать";
 "Imported audio" = "Импортированное аудио";
+"Imported media" = "Импортированный файл";
 "Importing audio…" = "Импорт аудио…";
+"Importing media…" = "Импорт файла…";
 "Interface" = "Интерфейс";
 "Interface Language" = "Язык интерфейса";
 "Keep Recording" = "Продолжить запись";
@@ -89,6 +95,7 @@
 "Ready to Use Offline" = "Готовы к работе без интернета";
 "Ready to transcribe" = "Готова к расшифровке";
 "Record a meeting or import audio to create a private transcript on your Mac." = "Запишите встречу или импортируйте аудио, чтобы создать расшифровку на этом Mac.";
+"Record a meeting or import audio or video to create a private transcript on your Mac." = "Запишите встречу или импортируйте аудио или видео, чтобы создать расшифровку на этом Mac.";
 "Recording" = "Запись";
 "Recording Actions" = "Действия с записью";
 "Recording Library" = "Библиотека записей";
@@ -129,6 +136,7 @@
 "Stop recording and quit?" = "Остановить запись и выйти?";
 "Stopping after the current step…" = "Остановка после текущего этапа…";
 "The audio device format could not be converted." = "Не удалось преобразовать формат аудиоустройства.";
+"The imported audio has an unsupported format." = "Формат импортированного аудио не поддерживается.";
 "The first setup may take several minutes. Keep Scribe open." = "Первая настройка может занять несколько минут. Не закрывайте Scribe.";
 "The new transcript will replace text corrections, speaker assignments, and custom names. Your original audio will be kept." = "Новая расшифровка заменит исправления текста, назначения участников и заданные имена. Исходное аудио сохранится.";
 "The recorded audio has an unsupported format." = "Формат записанного аудио не поддерживается.";
@@ -136,6 +144,8 @@
 "The recording, audio, and transcript will be permanently removed from this Mac." = "Запись, аудио и расшифровка будут безвозвратно удалены с этого Mac.";
 "The selected application has no audio process. Start the meeting audio, or select All system audio." = "У выбранного приложения нет аудиопроцесса. Включите звук встречи или выберите «Все системные звуки».";
 "The system audio format is unavailable." = "Формат системного аудио недоступен.";
+"This file does not contain an audio track." = "В этом файле нет аудиодорожки.";
+"This file does not contain readable audio." = "В этом файле нет доступного для чтения аудио.";
 "This name will appear throughout this recording." = "Это имя будет использоваться во всей записи.";
 "Transcribe Again" = "Расшифровать заново";
 "Transcribe Recording" = "Расшифровать запись";

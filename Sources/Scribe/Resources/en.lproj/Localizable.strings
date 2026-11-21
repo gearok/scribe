@@ -8,6 +8,8 @@
 "Cancel" = "Cancel";
 "Cancel Processing" = "Cancel Processing";
 "Could not open this audio file." = "Could not open this audio file.";
+"Could not open this audio or video file." = "Could not open this audio or video file.";
+"Could not read the imported audio." = "Could not read the imported audio.";
 "Could not read the recorded audio." = "Could not read the recorded audio.";
 "Create a transcript with individual speaker labels." = "Create a transcript with individual speaker labels.";
 "Create the system audio input" = "Create the system audio input";
@@ -27,8 +29,12 @@
 "Finishing your transcript" = "Finishing your transcript";
 "Identifying individual speakers" = "Identifying individual speakers";
 "Import Audio" = "Import Audio";
+"Import Audio or Video" = "Import Audio or Video";
+"Import" = "Import";
 "Imported audio" = "Imported audio";
+"Imported media" = "Imported media";
 "Importing audio…" = "Importing audio…";
+"Importing media…" = "Importing media…";
 "Interface" = "Interface";
 "Interface Language" = "Interface Language";
 "Keep Recording" = "Keep Recording";
@@ -89,6 +95,7 @@
 "Ready to Use Offline" = "Ready to Use Offline";
 "Ready to transcribe" = "Ready to transcribe";
 "Record a meeting or import audio to create a private transcript on your Mac." = "Record a meeting or import audio to create a private transcript on your Mac.";
+"Record a meeting or import audio or video to create a private transcript on your Mac." = "Record a meeting or import audio or video to create a private transcript on your Mac.";
 "Recording" = "Recording";
 "Recording Actions" = "Recording Actions";
 "Recording Library" = "Recording Library";
@@ -129,6 +136,7 @@
 "Stop recording and quit?" = "Stop recording and quit?";
 "Stopping after the current step…" = "Stopping after the current step…";
 "The audio device format could not be converted." = "The audio device format could not be converted.";
+"The imported audio has an unsupported format." = "The imported audio has an unsupported format.";
 "The first setup may take several minutes. Keep Scribe open." = "The first setup may take several minutes. Keep Scribe open.";
 "The new transcript will replace text corrections, speaker assignments, and custom names. Your original audio will be kept." = "The new transcript will replace text corrections, speaker assignments, and custom names. Your original audio will be kept.";
 "The recorded audio has an unsupported format." = "The recorded audio has an unsupported format.";
@@ -136,6 +144,8 @@
 "The recording, audio, and transcript will be permanently removed from this Mac." = "The recording, audio, and transcript will be permanently removed from this Mac.";
 "The selected application has no audio process. Start the meeting audio, or select All system audio." = "The selected application has no audio process. Start the meeting audio, or select All system audio.";
 "The system audio format is unavailable." = "The system audio format is unavailable.";
+"This file does not contain an audio track." = "This file does not contain an audio track.";
+"This file does not contain readable audio." = "This file does not contain readable audio.";
 "This name will appear throughout this recording." = "This name will appear throughout this recording.";
 "Transcribe Again" = "Transcribe Again";
 "Transcribe Recording" = "Transcribe Recording";
