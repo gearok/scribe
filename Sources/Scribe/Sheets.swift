@@ -70,6 +70,20 @@ struct SettingsSheet: View {
                             Text(language.name).tag(language)
                         }
                     }
+
+                    LabeledContent(L10n.text("Transcript Text Size")) {
+                        HStack(spacing: 8) {
+                            Text(L10n.format("%ld pt", Int(model.transcriptTextSize)))
+                                .monospacedDigit()
+                            Stepper(
+                                L10n.text("Transcript Text Size"),
+                                value: $model.transcriptTextSize,
+                                in: TranscriptTextSize.range,
+                                step: 1
+                            )
+                            .labelsHidden()
+                        }
+                    }
                 }
                 Section(L10n.text("Local Transcription")) {
                     LabeledContent(L10n.text("Models"), value: L10n.text(model.modelsReady ? "Ready to Use Offline" : "Not Downloaded"))

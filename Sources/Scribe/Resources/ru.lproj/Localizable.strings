@@ -172,6 +172,8 @@
 "Updates are paused while recording or processing." = "Обновления приостановлены на время записи и обработки.";
 "Updates download from GitHub and are verified before installation. You choose when to install." = "Обновления загружаются с GitHub и проверяются перед установкой. Вы выбираете время установки.";
 "Appearance" = "Оформление";
+"Transcript Text Size" = "Размер текста расшифровки";
+"%ld pt" = "%ld пт";
 "Light" = "Светлое";
 "Dark" = "Тёмное";
 "System" = "Системное";

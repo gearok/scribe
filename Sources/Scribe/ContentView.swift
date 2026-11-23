@@ -406,13 +406,13 @@ private struct TranscriptParagraph: View {
                     ZStack(alignment: .topLeading) {
                         // Match the editor's line wrapping, including an empty final line.
                         Text(editedText + "\u{200B}")
-                            .font(.body)
+                            .font(.system(size: model.transcriptTextSize))
                             .padding(.horizontal, 5)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .hidden().accessibilityHidden(true)
                         TextEditor(text: $editedText)
-                            .font(.body)
+                            .font(.system(size: model.transcriptTextSize))
                             .scrollContentBackground(.hidden)
                             .scrollDisabled(true)
                             .focused($editorFocused)
@@ -438,7 +438,9 @@ private struct TranscriptParagraph: View {
                 // Keep Save and Cancel inside the editing region so Cancel never autosaves.
                 .background(OutsideClickObserver(onOutsideClick: saveEditing))
             } else {
-                Text(highlightedText).font(.body).frame(maxWidth: .infinity, alignment: .leading)
+                Text(highlightedText)
+                    .font(.system(size: model.transcriptTextSize))
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .highPriorityGesture(TapGesture(count: 2).onEnded { beginEditing() })
                     .help(L10n.text("Double-click to edit this paragraph"))

@@ -44,6 +44,9 @@ final class AppModel: ObservableObject {
     @Published var defaultLanguage: MeetingLanguage = MeetingLanguage(rawValue: UserDefaults.standard.string(forKey: "defaultLanguage") ?? "auto") ?? .automatic {
         didSet { UserDefaults.standard.set(defaultLanguage.rawValue, forKey: "defaultLanguage") }
     }
+    @Published var transcriptTextSize = TranscriptTextSize.saved() {
+        didSet { TranscriptTextSize.save(transcriptTextSize) }
+    }
     let playback = PlaybackController()
     let rootDirectory: URL
     let isDemo: Bool

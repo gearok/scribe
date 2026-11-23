@@ -172,6 +172,8 @@
 "Updates are paused while recording or processing." = "Updates are paused while recording or processing.";
 "Updates download from GitHub and are verified before installation. You choose when to install." = "Updates download from GitHub and are verified before installation. You choose when to install.";
 "Appearance" = "Appearance";
+"Transcript Text Size" = "Transcript Text Size";
+"%ld pt" = "%ld pt";
 "Light" = "Light";
 "Dark" = "Dark";
 "System" = "System";

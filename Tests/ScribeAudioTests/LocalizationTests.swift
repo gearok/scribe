@@ -50,6 +50,23 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(defaults.string(forKey: "defaultLanguage"), "auto")
     }
 
+    func testTranscriptTextSizePersistsAndStaysWithinItsSupportedRange() throws {
+        let suite = "scribe-text-size-test-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        XCTAssertEqual(TranscriptTextSize.saved(in: defaults), TranscriptTextSize.defaultValue)
+
+        TranscriptTextSize.save(21, in: defaults)
+        XCTAssertEqual(TranscriptTextSize.saved(in: defaults), 21)
+
+        TranscriptTextSize.save(100, in: defaults)
+        XCTAssertEqual(TranscriptTextSize.saved(in: defaults), TranscriptTextSize.maximum)
+
+        TranscriptTextSize.save(1, in: defaults)
+        XCTAssertEqual(TranscriptTextSize.saved(in: defaults), TranscriptTextSize.minimum)
+    }
+
     func testGeneratedSpeakerLabelsSwitchButCustomNamesRemainVerbatim() throws {
         var speaker = Speaker(recordingID: "test", name: "Speaker 2", colorIndex: 2)
         XCTAssertEqual(speaker.displayName(in: .russian), "Участник 2")
