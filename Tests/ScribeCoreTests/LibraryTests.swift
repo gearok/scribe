@@ -43,6 +43,23 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(saved.segments.map(\.start), [1, 4, 7])
     }
 
+    func testWordTimingsSurviveReopeningAndSpeakerMerging() throws {
+        let (db, directory) = try makeDatabase()
+        let recording = Recording(title: "Meeting", status: .ready)
+        let first = Speaker(recordingID: recording.id, name: "Anna", colorIndex: 1)
+        let duplicate = Speaker(recordingID: recording.id, name: "Other", colorIndex: 2)
+        let words = [TimedWord(text: " Hello", start: 1, end: 2), TimedWord(text: " there", start: 2, end: 3)]
+        let paragraphs = TranscriptAssembler.assemble(words: words, turns: [], recordingID: recording.id,
+                                                       speakerIDs: [:], unknownID: duplicate.id, track: .system)
+        try db.saveTranscript(recording: recording, speakers: [first, duplicate], segments: paragraphs)
+        try db.mergeSpeaker(duplicate, into: first)
+        let reopened = try LibraryDatabase(url: directory.appendingPathComponent("library.sqlite"))
+        let saved = try XCTUnwrap(reopened.transcript(recordingID: recording.id).segments.first)
+        XCTAssertEqual(saved.words, words)
+        XCTAssertEqual(saved.text, "Hello there")
+        XCTAssertEqual(saved.speakerID, first.id)
+    }
+
     func testInvalidReplacementRollsBackEntireTranscript() throws {
         let (db, _) = try makeDatabase()
         let recording = Recording(title: "Original", status: .ready)

@@ -85,10 +85,12 @@ public struct TranscriptSegment: Identifiable, Codable, Equatable, Sendable {
     public var end: Double
     public var text: String
     public var track: AudioTrack
+    /// Original recognition units. Older transcripts and manually edited text have no word alignment.
+    public var words: [TimedWord]?
     public init(id: String = UUID().uuidString, recordingID: String, speakerID: String, start: Double,
-                end: Double, text: String, track: AudioTrack) {
+                end: Double, text: String, track: AudioTrack, words: [TimedWord]? = nil) {
         self.id = id; self.recordingID = recordingID; self.speakerID = speakerID
-        self.start = start; self.end = end; self.text = text; self.track = track
+        self.start = start; self.end = end; self.text = text; self.track = track; self.words = words
     }
 }
 
@@ -106,7 +108,7 @@ public struct SpeakerTurn: Sendable {
     }
 }
 
-public struct TimedWord: Sendable {
+public struct TimedWord: Codable, Equatable, Sendable {
     public var text: String
     public var start: Double
     public var end: Double
@@ -154,9 +156,10 @@ public enum TranscriptAssembler {
     public static func assemble(words: [TimedWord], turns: [SpeakerTurn], recordingID: String,
                                 speakerIDs: [String: String], unknownID: String, track: AudioTrack) -> [TranscriptSegment] {
         var result: [TranscriptSegment] = []
-        let sortedTurns = turns.sorted { $0.start < $1.start }
+        let sortedTurns = turns.filter { $0.start.isFinite && $0.end.isFinite && $0.end > $0.start }
+            .sorted { $0.start < $1.start }
         var firstCandidate = 0
-        for word in words.sorted(by: { $0.start < $1.start }) where !word.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        for word in TranscriptTiming.orderedWords(words) {
             while firstCandidate < sortedTurns.count && sortedTurns[firstCandidate].end <= word.start {
                 firstCandidate += 1
             }
@@ -167,15 +170,26 @@ public enum TranscriptAssembler {
                 let overlap = max(0, min(turn.end, word.end) - max(turn.start, word.start))
                 if overlap > bestOverlap { bestOverlap = overlap; winner = turn.speaker }
             }
-            let speakerID = winner.flatMap { speakerIDs[$0] } ?? unknownID
+            var speakerID = winner.flatMap { speakerIDs[$0] } ?? unknownID
+            if word.end == word.start {
+                if word.text.rangeOfCharacter(from: .alphanumerics) == nil,
+                   let last = result.last, word.start <= last.end {
+                    speakerID = last.speakerID
+                } else if let turn = sortedTurns.dropFirst(firstCandidate).first(where: {
+                    $0.start <= word.start && word.start < $0.end
+                }) {
+                    speakerID = speakerIDs[turn.speaker] ?? unknownID
+                }
+            }
             if let last = result.last, last.speakerID == speakerID, word.start - last.end < 1.8,
                word.end - last.start < 35 {
                 result[result.count - 1].text += word.text
                 result[result.count - 1].end = max(last.end, word.end)
+                result[result.count - 1].words?.append(word)
             } else {
                 result.append(TranscriptSegment(recordingID: recordingID, speakerID: speakerID,
                                                 start: max(0, word.start), end: max(word.start, word.end),
-                                                text: word.text, track: track))
+                                                text: word.text, track: track, words: [word]))
             }
         }
         for index in result.indices { result[index].text = result[index].text.trimmingCharacters(in: .whitespacesAndNewlines) }

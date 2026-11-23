@@ -12,7 +12,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var selectedFolderID: String?
     @Published var selectedID: String?
     @Published var speakers: [Speaker] = []
-    @Published var segments: [TranscriptSegment] = []
+    @Published var segments: [TranscriptSegment] = [] {
+        didSet { overlappingSegmentIDs = TranscriptInterleaver.overlappingSegmentIDs(in: segments) }
+    }
+    private(set) var overlappingSegmentIDs: Set<String> = []
     @Published var search = ""
     @Published var searchFocusRequest = 0
     @Published var transcriptSearch = ""
@@ -316,6 +319,7 @@ final class AppModel: ObservableObject {
     func editText(_ segment: TranscriptSegment, text: String) {
         var changed = segment; changed.text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !changed.text.isEmpty else { return }
+        if changed.text != segment.text { changed.words = nil }
         saveSegment(changed)
     }
     private func saveSegment(_ segment: TranscriptSegment) {

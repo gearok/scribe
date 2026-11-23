@@ -114,4 +114,24 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.segments.first?.speakerID, remote[0].id)
         XCTAssertNil(model.errorMessage)
     }
+
+    func testTextEditsInvalidateWordAlignmentButSpeakerChangesPreserveIt() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-word-edit-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(isDemo: true, dataDirectory: root)
+        var segment = try XCTUnwrap(model.segments.first)
+        segment.words = [TimedWord(text: segment.text, start: segment.start, end: segment.end)]
+        let speaker = try XCTUnwrap(model.speakers.first)
+        model.reassign(segment, to: speaker)
+        var saved = try XCTUnwrap(model.segments.first { $0.id == segment.id })
+        XCTAssertEqual(saved.words, segment.words)
+        model.editText(saved, text: saved.text)
+        saved = try XCTUnwrap(model.segments.first { $0.id == segment.id })
+        XCTAssertEqual(saved.words, segment.words)
+        model.editText(saved, text: "Исправленный текст")
+        let reopened = AppModel(isDemo: false, dataDirectory: root)
+        let edited = try XCTUnwrap(reopened.segments.first { $0.id == segment.id })
+        XCTAssertEqual(edited.text, "Исправленный текст")
+        XCTAssertNil(edited.words)
+    }
 }

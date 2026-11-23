@@ -386,6 +386,12 @@ private struct TranscriptParagraph: View {
                     .buttonStyle(.borderless).font(.caption).monospacedDigit().foregroundStyle(.secondary)
                     .help(L10n.format("Play from %@", TimeLabel.clock(segment.start))).disabled(!model.playback.hasAudio)
                     .accessibilityValue(isActive ? L10n.text("Now Playing") : "")
+                if model.overlappingSegmentIDs.contains(segment.id) {
+                    Image(systemName: "waveform")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .help(L10n.text("Overlapping Speech"))
+                        .accessibilityLabel(L10n.text("Overlapping Speech"))
+                }
                 Spacer()
                 Button(L10n.text("Copy Paragraph"), systemImage: "doc.on.doc") {
                     NSPasteboard.general.clearContents()

@@ -116,14 +116,19 @@ actor TranscriptionService {
                                                   wordTimestamps: true, concurrentWorkerCount: 1)
                     let results = try await whisper.transcribe(audioArray: audio, decodeOptions: options)
                     let words = results.flatMap(\.segments).filter { $0.noSpeechProb < 0.85 }.flatMap { segment -> [TimedWord] in
-                        if let words = segment.words, !words.isEmpty {
-                            return words.map { TimedWord(text: $0.word, start: contextStart + Double($0.start), end: contextStart + Double($0.end)) }
+                        let words = (segment.words ?? []).map {
+                            TimedWord(text: $0.word, start: contextStart + Double($0.start), end: contextStart + Double($0.end))
                         }
-                        return [TimedWord(text: segment.text, start: contextStart + Double(segment.start), end: contextStart + Double(segment.end))]
+                        let fallback = TimedWord(text: segment.text, start: contextStart + Double(segment.start),
+                                                 end: contextStart + Double(segment.end))
+                        return TranscriptTiming.recognitionWords(words, fallback: fallback,
+                                                                 within: SpeechWindow(start: contextStart, end: contextEnd))
                     }
                     wordsByTrack[track, default: []] += words.filter {
                         let middle = ($0.start + $0.end) / 2
                         return middle >= window.start && middle < window.end
+                    }.map {
+                        TimedWord(text: $0.text, start: max(window.start, $0.start), end: min(window.end, $0.end))
                     }
                 }
             }
@@ -159,7 +164,7 @@ actor TranscriptionService {
             segments += remoteSegments
         }
         await progress("Finishing your transcript", 1)
-        return (speakers, segments.sorted { $0.start < $1.start })
+        return (speakers, TranscriptInterleaver.interleave(segments))
     }
 }
 
