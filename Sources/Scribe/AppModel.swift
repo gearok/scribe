@@ -149,7 +149,7 @@ final class AppModel: ObservableObject {
     }
 
     @discardableResult
-    func createFolder(name: String, color: FolderColor) -> Bool {
+    func createFolder(name: String, color: FolderColor = .gray) -> Bool {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, let database else { return false }
         do {
@@ -206,7 +206,9 @@ final class AppModel: ObservableObject {
             do {
                 try database.save(recording)
                 if let destinationFolderID { try database.moveRecordings([recording.id], toFolder: destinationFolderID) }
-                try await capture.start(directory: directory(for: recording), source: source) { [weak self] track, level in
+                try await capture.start(directory: directory(for: recording), source: source, warning: { [weak self] message in
+                    Task { @MainActor in self?.errorMessage = L10n.text(message) }
+                }) { [weak self] track, level in
                     Task { @MainActor in
                         if track == .microphone { self?.microphoneLevel = level } else { self?.systemLevel = level }
                     }

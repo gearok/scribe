@@ -11,6 +11,7 @@ final class AudioTrackWriter: @unchecked Sendable {
     private var framesWritten: Int64 = 0
     private var failure: Error?
     private var lastMeterTime = 0.0
+    private var hasAudio = false
     let meter: @Sendable (Float) -> Void
 
     init(url: URL, startHostTime: UInt64, meter: @escaping @Sendable (Float) -> Void) throws {
@@ -67,6 +68,10 @@ final class AudioTrackWriter: @unchecked Sendable {
         if expected - framesWritten > 1_600 || framesWritten == 0 { try pad(to: expected) }
         try file.write(from: converted)
         framesWritten += Int64(converted.frameLength)
+        if !hasAudio, let samples = converted.floatChannelData?[0] {
+            hasAudio = UnsafeBufferPointer(start: samples, count: Int(converted.frameLength))
+                .contains { abs($0) > 0.00001 }
+        }
         if elapsed - lastMeterTime >= 0.08, let samples = converted.floatChannelData?[0] {
             var power: Float = 0
             for index in 0..<Int(converted.frameLength) { power += samples[index] * samples[index] }
@@ -86,10 +91,12 @@ final class AudioTrackWriter: @unchecked Sendable {
         }
     }
 
-    func finish(duration: Double) throws {
+    @discardableResult
+    func finish(duration: Double) throws -> Bool {
         try queue.sync {
             if let failure { throw failure }
             try pad(to: Int64(duration * 16_000))
+            return hasAudio
         }
     }
 }

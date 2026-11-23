@@ -211,3 +211,5 @@
 "Waiting" = "В очереди";
 "Downloading or Preparing" = "Загрузка или подготовка";
 "Delete and Redownload Models" = "Удалить и заново загрузить модели";
+"Microphone audio was interrupted. Scribe is trying to reconnect. Check your input device in System Settings → Sound." = "Запись микрофона прервана. Scribe пытается восстановить подключение. Проверьте устройство ввода в Системных настройках → Звук.";
+"No microphone audio was captured. Check the selected input device and microphone level in System Settings → Sound before recording again." = "Звук микрофона не записан. Перед следующей записью проверьте выбранное устройство ввода и уровень микрофона в Системных настройках → Звук.";

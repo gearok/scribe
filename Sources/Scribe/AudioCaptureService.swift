@@ -9,8 +9,9 @@ struct CaptureSource: Identifiable, Hashable {
     static let microphone = CaptureSource(id: -1, name: "Microphone only")
 }
 
+@MainActor
 final class AudioCaptureService {
-    private var engine: AVAudioEngine?
+    private var microphoneSession: MicrophoneCaptureSession?
     private var micWriter: AudioTrackWriter?
     private var systemWriter: AudioTrackWriter?
     private var tapID: AudioObjectID = 0
@@ -18,29 +19,22 @@ final class AudioCaptureService {
     private var ioProc: AudioDeviceIOProcID?
     private var beganHostTime: UInt64 = 0
     private var isCapturing = false
-    private var micTapInstalled = false
+    private var reportWarning: @Sendable (String) -> Void = { _ in }
 
     func start(directory: URL, source: CaptureSource,
+               warning: @escaping @Sendable (String) -> Void = { _ in },
                meter: @Sendable @escaping (AudioTrack, Float) -> Void) async throws {
         guard !isCapturing else { throw ScribeError.message("A recording is already in progress.") }
         let allowed = await AVCaptureDevice.requestAccess(for: .audio)
         guard allowed else { throw ScribeError.message("Microphone access is off. Enable Scribe in System Settings → Privacy & Security → Microphone.") }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         beganHostTime = mach_absolute_time()
+        reportWarning = warning
         do {
             micWriter = try AudioTrackWriter(url: directory.appendingPathComponent(AudioTrack.microphone.filename), startHostTime: beganHostTime) { meter(.microphone, $0) }
-            let engine = AVAudioEngine()
-            self.engine = engine
-            let input = engine.inputNode
-            let format = input.outputFormat(forBus: 0)
-            guard format.sampleRate > 0, format.channelCount > 0 else { throw ScribeError.message("No microphone is available. Connect an input device and try again.") }
-            let micWriter = self.micWriter!
-            input.installTap(onBus: 0, bufferSize: 4096, format: format) { buffer, time in
-                micWriter.append(buffer, hostTime: time.isHostTimeValid ? time.hostTime : mach_absolute_time())
-            }
-            micTapInstalled = true
-            engine.prepare()
-            try engine.start()
+            let microphoneSession = MicrophoneCaptureSession(writer: micWriter!, reportInterruption: warning)
+            self.microphoneSession = microphoneSession
+            try microphoneSession.start()
             if source.id != -1 {
                 systemWriter = try AudioTrackWriter(url: directory.appendingPathComponent(AudioTrack.system.filename), startHostTime: beganHostTime) { meter(.system, $0) }
                 try startSystemAudio(source: source)
@@ -102,12 +96,7 @@ final class AudioCaptureService {
     @discardableResult
     func stop() throws -> Double {
         let duration = beganHostTime > 0 ? AVAudioTime.seconds(forHostTime: mach_absolute_time() - beganHostTime) : 0
-        if let engine {
-            if micTapInstalled { engine.inputNode.removeTap(onBus: 0) }
-            engine.stop()
-        }
-        micTapInstalled = false
-        engine = nil
+        microphoneSession?.stop(); microphoneSession = nil
         if aggregateID != 0, let ioProc {
             AudioDeviceStop(aggregateID, ioProc)
             AudioDeviceDestroyIOProcID(aggregateID, ioProc)
@@ -116,9 +105,14 @@ final class AudioCaptureService {
         if aggregateID != 0 { AudioHardwareDestroyAggregateDevice(aggregateID); aggregateID = 0 }
         if tapID != 0 { AudioHardwareDestroyProcessTap(tapID); tapID = 0 }
         var writeError: Error?
-        do { try micWriter?.finish(duration: duration) } catch { writeError = error }
+        do {
+            if let micWriter, try !micWriter.finish(duration: duration), duration >= 3 {
+                reportWarning("No microphone audio was captured. Check the selected input device and microphone level in System Settings → Sound before recording again.")
+            }
+        } catch { writeError = error }
         do { try systemWriter?.finish(duration: duration) } catch { writeError = error }
         micWriter = nil; systemWriter = nil; isCapturing = false; beganHostTime = 0
+        reportWarning = { _ in }
         if let writeError { throw writeError }
         return duration
     }

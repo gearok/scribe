@@ -2,33 +2,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ScribeCore
 
-extension FolderColor {
-    var color: Color {
-        switch self {
-        case .red: .red
-        case .orange: .orange
-        case .yellow: .yellow
-        case .green: .green
-        case .blue: .blue
-        case .purple: .purple
-        case .pink: .pink
-        case .gray: .gray
-        }
-    }
-
-    // AppKit menus discard SwiftUI foreground styles on template symbols.
-    // Supply an original image whose pixels already contain the swatch color.
-    var menuImage: Image {
-        let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { bounds in
-            NSColor(self.color).setFill()
-            NSBezierPath(ovalIn: bounds.insetBy(dx: 3, dy: 3)).fill()
-            return true
-        }
-        image.isTemplate = false
-        return Image(nsImage: image).renderingMode(.original)
-    }
-}
-
 extension UTType {
     static let scribeRecording = UTType(exportedAs: "app.scribe.recording", conformingTo: .data)
 }
@@ -71,14 +44,6 @@ struct FoldersSidebar: View {
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            HStack {
-                Button(L10n.text("New Folder"), systemImage: "folder.badge.plus") { model.showNewFolder = true }
-                    .buttonStyle(.borderless)
-                Spacer()
-            }
-            .padding()
-        }
     }
 }
 
@@ -111,39 +76,30 @@ struct NewFolderSheet: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
-    @State private var color: FolderColor = .blue
     @FocusState private var nameFocused: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section(L10n.text("New Folder")) {
-                    TextField(L10n.text("Folder Name"), text: $name).focused($nameFocused)
-                    Picker(L10n.text("Color"), selection: $color) {
-                        ForEach(FolderColor.allCases, id: \.self) { option in
-                            Label {
-                                Text(L10n.text(option.label))
-                            } icon: {
-                                option.menuImage
-                            }
-                            .tag(option)
-                        }
-                    }
-                }
+        VStack(alignment: .leading, spacing: 16) {
+            Text(L10n.text("New Folder")).font(.headline)
+            LabeledContent(L10n.text("Folder Name")) {
+                TextField("", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel(L10n.text("Folder Name"))
+                    .focused($nameFocused)
             }
-            .formStyle(.grouped).scrollDisabled(true)
             HStack {
                 Spacer()
                 Button(L10n.text("Cancel"), role: .cancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(L10n.text("Create Folder")) {
-                    if model.createFolder(name: name, color: color) { dismiss() }
+                    if model.createFolder(name: name) { dismiss() }
                 }
                 .primaryActionStyle().keyboardShortcut(.defaultAction)
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .padding()
         }
-        .frame(width: 400, height: 240)
+        .padding(20)
+        .frame(width: 400)
+        .fixedSize(horizontal: false, vertical: true)
         .task { nameFocused = true }
         .alert(L10n.text("Scribe needs your attention"), isPresented: Binding(get: { model.errorMessage != nil }, set: {
             if !$0 { model.errorMessage = nil }
@@ -163,7 +119,7 @@ struct RecordingFolderMenu: View {
                 Button {
                     model.moveRecordings([recording.id], toFolder: folder.id)
                 } label: {
-                    Label { Text(folder.name) } icon: { folder.color.menuImage }
+                    Label(folder.name, systemImage: "folder")
                 }
                 .disabled(model.folderAssignments[recording.id] == folder.id)
             }

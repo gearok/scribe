@@ -11,10 +11,10 @@ final class AppModelTests: XCTestCase {
         let meeting = try XCTUnwrap(model.selectedRecording)
         let allIDs = Set(model.recordings.map(\.id))
         XCTAssertFalse(model.createFolder(name: "  \n ", color: .red))
-        XCTAssertTrue(model.createFolder(name: "  Project  ", color: .purple))
+        XCTAssertTrue(model.createFolder(name: "  Project  "))
         let project = try XCTUnwrap(model.selectedFolder)
         XCTAssertEqual(project.name, "Project")
-        XCTAssertEqual(project.color, .purple)
+        XCTAssertEqual(project.color, .gray)
         XCTAssertNil(model.selectedRecording)
         XCTAssertTrue(model.filteredRecordings.isEmpty)
 

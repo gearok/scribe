@@ -13,6 +13,23 @@ struct ContentView: View {
         })) {
             FoldersSidebar()
                 .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
+                .toolbar {
+                    if columnVisibility == .all || columnVisibility == .automatic {
+                        ToolbarItem(id: "new-folder", placement: .navigation) {
+                            Button(L10n.text("New Folder"), systemImage: "folder.badge.plus") {
+                                model.showNewFolder = true
+                            }
+                            .labelStyle(.iconOnly)
+                            .help(L10n.text("New Folder"))
+                        }
+                        if #available(macOS 26, *) {
+                            ToolbarSpacer(.fixed, placement: .navigation)
+                        }
+                    }
+                    if #available(macOS 26, *) {
+                        DefaultToolbarItem(kind: .sidebarToggle, placement: .navigation)
+                    }
+                }
         } content: {
             recordingsList
                 .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 480)
