@@ -37,6 +37,8 @@ final class AppModel: ObservableObject {
     @Published var isPreparingModels = false
     @Published var modelStep = ""
     @Published var modelProgress: Double?
+    @Published var modelSetupPhase: ModelSetupPhase = .waiting
+    @Published var availableModelComponents: Set<TranscriptionModelComponent> = []
     @Published var isImporting = false
     @Published var appearance: AppAppearance = .saved() {
         didSet { appearance.save() }
@@ -109,7 +111,7 @@ final class AppModel: ObservableObject {
             selectedID = recordings.first?.id
             select(selectedID)
         } catch { errorMessage = error.localizedDescription }
-        Task { modelsReady = await transcription.isPrepared() }
+        Task { await refreshModelAvailability() }
     }
 
     private func startRecordingTimer() {
@@ -241,7 +243,7 @@ final class AppModel: ObservableObject {
     }
 
     func process(_ recording: Recording) {
-        guard !isBusy, !isDemo, let database else { return }
+        guard !isBusy, !isPreparingModels, !isDemo, let database else { return }
         guard modelsReady else { showSettings = true; return }
         processingID = recording.id; processingStep = "Preparing your recording"; processingProgress = nil
         var pending = recording; pending.status = .processing; pending.errorMessage = nil
@@ -272,16 +274,24 @@ final class AppModel: ObservableObject {
 
     func cancelProcessing() { processingTask?.cancel(); processingStep = "Stopping after the current step…" }
 
-    func prepareModels() {
+    func prepareModels(redownload: Bool = false) {
         guard !isPreparingModels, !isBusy, !isDemo else { return }
         isPreparingModels = true; modelStep = "Preparing downloads"; modelProgress = nil
+        modelSetupPhase = .waiting
+        if redownload {
+            modelsReady = false
+            availableModelComponents = []
+        }
         modelsTask = Task { [self] in
             do {
+                if redownload { try await transcription.deleteDownloadedModels() }
+                try Task.checkCancellation()
                 try await transcription.prepare { [self] step, progress in
                     await updateModels(step, progress)
                 }
                 modelsReady = true
             } catch { errorMessage = error.localizedDescription }
+            await refreshModelAvailability()
             isPreparingModels = false; modelsTask = nil
         }
     }
@@ -383,7 +393,25 @@ final class AppModel: ObservableObject {
 
     func revealLibrary() { NSWorkspace.shared.open(rootDirectory) }
     private func updateProcessing(_ step: String, _ progress: Double?) { processingStep = step; processingProgress = progress }
-    private func updateModels(_ step: String, _ progress: Double?) { modelStep = step; modelProgress = progress }
+    func modelStatus(_ component: TranscriptionModelComponent) -> ModelComponentStatus {
+        component.status(available: availableModelComponents, phase: modelSetupPhase, isPreparing: isPreparingModels)
+    }
+
+    func refreshModelsForSettings() async {
+        await refreshModelAvailability()
+    }
+
+    private func refreshModelAvailability() async {
+        availableModelComponents = await transcription.availableModelComponents()
+        modelsReady = await transcription.isPrepared()
+    }
+
+    private func updateModels(_ phase: ModelSetupPhase, _ progress: Double?) {
+        // Whisper callbacks arrive through independent Tasks. Ignore callbacks for
+        // stages already completed so the details cannot jump backward.
+        guard isPreparingModels, phase.rawValue >= modelSetupPhase.rawValue else { return }
+        modelSetupPhase = phase; modelStep = phase.message; modelProgress = progress
+    }
     func finishBeforeQuit() {
         // Save audio on quit without starting a new inference task during termination.
         if let id = recordingID, var recording = recordings.first(where: { $0.id == id }) {

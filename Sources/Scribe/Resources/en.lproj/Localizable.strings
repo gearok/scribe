@@ -198,3 +198,16 @@
 "Clear Search" = "Clear Search";
 "Search Transcript" = "Search Transcript";
 "Overlapping Speech" = "Overlapping Speech";
+"Model Details" = "Model Details";
+"Whisper Tokenizer" = "Whisper Tokenizer";
+"Turns speech into text in Russian, English, and automatic language mode." = "Turns speech into text in Russian, English, and automatic language mode.";
+"Vocabulary and text rules used by Whisper to read and write words." = "Vocabulary and text rules used by Whisper to read and write words.";
+"Finds speech regions and changes between speakers in meeting audio." = "Finds speech regions and changes between speakers in meeting audio.";
+"Compares voice characteristics to distinguish individual speakers." = "Compares voice characteristics to distinguish individual speakers.";
+"Prepares audio features for speaker recognition." = "Prepares audio features for speaker recognition.";
+"Groups voice samples belonging to the same speaker. Includes clustering parameters." = "Groups voice samples belonging to the same speaker. Includes clustering parameters.";
+"View on Hugging Face" = "View on Hugging Face";
+"Not Ready" = "Not Ready";
+"Waiting" = "Waiting";
+"Downloading or Preparing" = "Downloading or Preparing";
+"Delete and Redownload Models" = "Delete and Redownload Models";

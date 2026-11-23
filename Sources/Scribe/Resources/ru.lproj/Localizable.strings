@@ -198,3 +198,16 @@
 "Clear Search" = "Очистить поиск";
 "Search Transcript" = "Поиск в расшифровке";
 "Overlapping Speech" = "Одновременная речь";
+"Model Details" = "Сведения о моделях";
+"Whisper Tokenizer" = "Токенизатор Whisper";
+"Turns speech into text in Russian, English, and automatic language mode." = "Преобразует речь в текст на русском и английском языках или с автоматическим определением языка.";
+"Vocabulary and text rules used by Whisper to read and write words." = "Словарь и правила обработки текста, которые Whisper использует для работы со словами.";
+"Finds speech regions and changes between speakers in meeting audio." = "Находит участки речи и смену участников в звуковой дорожке встречи.";
+"Compares voice characteristics to distinguish individual speakers." = "Сравнивает характеристики голосов, чтобы различать участников.";
+"Prepares audio features for speaker recognition." = "Подготавливает звуковые признаки для различения голосов.";
+"Groups voice samples belonging to the same speaker. Includes clustering parameters." = "Объединяет фрагменты голоса одного участника. Включает параметры группировки.";
+"View on Hugging Face" = "Открыть на Hugging Face";
+"Not Ready" = "Не готово";
+"Waiting" = "В очереди";
+"Downloading or Preparing" = "Загрузка или подготовка";
+"Delete and Redownload Models" = "Удалить и заново загрузить модели";

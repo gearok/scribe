@@ -55,6 +55,7 @@ struct SettingsSheet: View {
     @EnvironmentObject private var model: AppModel
     @EnvironmentObject private var updates: AppUpdater
     @Environment(\.dismiss) private var dismiss
+    @State private var showModelDetails = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,19 +87,52 @@ struct SettingsSheet: View {
                     }
                 }
                 Section(L10n.text("Local Transcription")) {
-                    LabeledContent(L10n.text("Models"), value: L10n.text(model.modelsReady ? "Ready to Use Offline" : "Not Downloaded"))
+                    LabeledContent(L10n.text("Models")) {
+                        if model.isPreparingModels {
+                            Text(L10n.text("Downloading or Preparing")).foregroundStyle(.secondary)
+                        } else if model.modelsReady {
+                            Text(L10n.text("Ready to Use Offline")).foregroundStyle(.secondary)
+                        } else {
+                            Button(L10n.text("Download Models"), systemImage: "arrow.down.circle") { model.prepareModels() }
+                                .primaryActionStyle().disabled(model.isBusy || model.isDemo)
+                        }
+                    }
                     if model.isPreparingModels {
                         Text(L10n.text(model.modelStep))
                         if let progress = model.modelProgress { ProgressView(value: progress) }
                         else { ProgressView().controlSize(.small) }
                         Text(L10n.text("The first setup may take several minutes. Keep Scribe open."))
                             .font(.callout).foregroundStyle(.secondary)
-                    } else if !model.modelsReady {
-                        Button(L10n.text("Download Models"), systemImage: "arrow.down.circle") { model.prepareModels() }
-                            .primaryActionStyle().disabled(model.isBusy || model.isDemo)
                     }
-                    Text(L10n.text("Models download from Hugging Face. Meeting audio is processed locally. Allow a few GB of free disk space for setup."))
-                        .font(.callout).foregroundStyle(.secondary)
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(L10n.text("Models download from Hugging Face. Meeting audio is processed locally. Allow a few GB of free disk space for setup."))
+                            .font(.callout).foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button(L10n.text("Delete and Redownload Models"), systemImage: "arrow.clockwise") {
+                            model.prepareModels(redownload: true)
+                        }
+                        .labelStyle(.iconOnly).buttonStyle(.bordered)
+                        .help(L10n.text("Delete and Redownload Models"))
+                        .disabled(model.isBusy || model.isPreparingModels || model.isDemo)
+                    }
+                    DisclosureGroup(L10n.text("Model Details"), isExpanded: $showModelDetails) {
+                        ForEach(TranscriptionModelComponent.allCases) { component in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(L10n.text(component.name)).font(.headline)
+                                    Spacer()
+                                    Text(L10n.text(model.modelStatus(component).label))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                Text(L10n.text(component.purpose)).font(.callout)
+                                Text(component.files).font(.caption).foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                                Link(L10n.text("View on Hugging Face"), destination: component.source)
+                                    .font(.caption)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
                 }
                 Section(L10n.text("Recording")) {
                     Picker(L10n.text("Default Language"), selection: $model.defaultLanguage) {
@@ -131,6 +165,7 @@ struct SettingsSheet: View {
             }.padding()
         }
         .frame(width: 580, height: 580)
+        .task { await model.refreshModelsForSettings() }
         .modifier(SheetErrorAlert(model: model))
     }
 }

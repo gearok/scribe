@@ -15,28 +15,70 @@ actor TranscriptionService {
     init(modelsDirectory: URL) { self.modelsDirectory = modelsDirectory }
 
     func isPrepared() -> Bool {
-        guard let path = try? String(contentsOf: modelPointer, encoding: .utf8) else { return false }
-        return FileManager.default.fileExists(atPath: path.trimmingCharacters(in: .whitespacesAndNewlines))
-            && FileManager.default.fileExists(atPath: modelsDirectory.appendingPathComponent("speakers-ready").path)
+        availableModelComponents() == Set(TranscriptionModelComponent.allCases)
     }
 
-    func prepare(progress: @Sendable @escaping (String, Double?) async -> Void) async throws {
+    func availableModelComponents() -> Set<TranscriptionModelComponent> {
+        var available: Set<TranscriptionModelComponent> = []
+        if let path = try? String(contentsOf: modelPointer, encoding: .utf8) {
+            let folder = URL(fileURLWithPath: path.trimmingCharacters(in: .whitespacesAndNewlines))
+            if ["MelSpectrogram", "AudioEncoder", "TextDecoder"].allSatisfy({
+                FileManager.default.fileExists(atPath: ModelUtilities.detectModelURL(inFolder: folder, named: $0).path)
+            }) {
+                available.insert(.whisper)
+            }
+        }
+        let tokenizerLocations = [tokenizerFolder.appendingPathComponent("models/openai/whisper-large-v3"), tokenizerFolder]
+        if tokenizerLocations.contains(where: { folder in
+            ["tokenizer.json", "tokenizer_config.json"].allSatisfy {
+                FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path)
+            }
+        }) {
+            available.insert(.tokenizer)
+        }
+        // Written only after FluidAudio prepares all four models and PLDA parameters.
+        if FileManager.default.fileExists(atPath: modelsDirectory.appendingPathComponent("speakers-ready").path) {
+            // FluidAudio has used several cache layouts. Keep completed downloads
+            // from older Scribe versions visible without demanding a new download.
+            let folders = [diarizerFolder, diarizerFolder.appendingPathComponent(Repo.diarizer.folderName),
+                           diarizerFolder.appendingPathComponent("speaker-diarization"),
+                           diarizerFolder.appendingPathComponent("speaker-diarization-offline")]
+            for component in TranscriptionModelComponent.allCases where component.phase == .speakers {
+                if folders.contains(where: { folder in
+                    component.speakerFiles.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
+                }) {
+                    available.insert(component)
+                }
+            }
+        }
+        return available
+    }
+
+    func deleteDownloadedModels() throws {
+        // Remove only Scribe's model cache. Never follow whisper-path.txt to delete
+        // an external directory, or touch the recording library next to Models.
+        if FileManager.default.fileExists(atPath: modelsDirectory.path) {
+            try FileManager.default.removeItem(at: modelsDirectory)
+        }
+    }
+
+    func prepare(progress: @Sendable @escaping (ModelSetupPhase, Double?) async -> Void) async throws {
         try FileManager.default.createDirectory(at: modelsDirectory, withIntermediateDirectories: true)
-        await progress("Downloading transcription model", nil)
+        await progress(.transcription, nil)
         let folder = try await WhisperKit.download(variant: Self.modelName, downloadBase: whisperFolder) { value in
-            Task { await progress("Downloading transcription model", value.fractionCompleted) }
+            Task { await progress(.transcription, value.fractionCompleted) }
         }
         try Task.checkCancellation()
         try folder.path.write(to: modelPointer, atomically: true, encoding: .utf8)
-        await progress("Preparing the transcription tokenizer", nil)
+        await progress(.tokenizer, nil)
         _ = try await ModelUtilities.loadTokenizer(for: .largev3, tokenizerFolder: tokenizerFolder)
-        await progress("Preparing speaker detection models", nil)
+        await progress(.speakers, nil)
         ModelHub.offlineMode = false
         let manager = OfflineDiarizerManager()
         try await manager.prepareModels(directory: diarizerFolder)
         try Task.checkCancellation()
         try Data().write(to: modelsDirectory.appendingPathComponent("speakers-ready"))
-        await progress("Models ready", 1)
+        await progress(.ready, 1)
     }
 
     func process(recording: Recording, directory: URL,

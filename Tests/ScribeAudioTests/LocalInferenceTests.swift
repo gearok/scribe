@@ -37,7 +37,7 @@ final class LocalInferenceTests: XCTestCase {
         silentWriter = nil
         let service = TranscriptionService(modelsDirectory: URL(fileURLWithPath: modelPath))
         if !(await service.isPrepared()) {
-            try await service.prepare { message, fraction in print("MODEL: \(message) \(fraction.map { String(Int($0 * 100)) + "%" } ?? "")") }
+            try await service.prepare { phase, fraction in print("MODEL: \(phase.message) \(fraction.map { String(Int($0 * 100)) + "%" } ?? "")") }
         }
         let recording = Recording(title: "Synthetic integration fixture", duration: duration, language: .automatic,
                                   sourceName: "Generated test speech", hasMicrophone: true, hasSystemAudio: true)
