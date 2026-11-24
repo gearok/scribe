@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 @MainActor
 final class AppModel: ObservableObject {
     @Published var recordings: [Recording] = []
+    @Published private(set) var recordingByteCounts: [String: Int64] = [:]
     @Published var folders: [RecordingFolder] = []
     @Published var folderAssignments: [String: String] = [:]
     @Published private(set) var selectedFolderID: String?
@@ -119,7 +120,11 @@ final class AppModel: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self, let startedAt = self.startedAt else { return }
-                self.elapsed = Date().timeIntervalSince(startedAt)
+                let elapsed = Date().timeIntervalSince(startedAt)
+                if Int(elapsed) != Int(self.elapsed), let recording = self.recordings.first(where: { $0.id == self.recordingID }) {
+                    self.recordingByteCounts[recording.id] = RecordingStorage.audioByteCount(in: self.directory(for: recording))
+                }
+                self.elapsed = elapsed
             }
         }
     }
@@ -132,6 +137,9 @@ final class AppModel: ObservableObject {
     func speaker(for id: String) -> Speaker? { speakers.first { $0.id == id } }
     func reload() throws {
         recordings = try database?.recordings() ?? []
+        recordingByteCounts = Dictionary(uniqueKeysWithValues: recordings.map {
+            ($0.id, RecordingStorage.audioByteCount(in: directory(for: $0)))
+        })
         folders = try database?.folders() ?? []
         folderAssignments = try database?.folderAssignments() ?? [:]
     }

@@ -4,6 +4,27 @@ import ScribeCore
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testRecordingSizesIncludeBothTracksWithoutAFolderAndRefreshOnReload() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-recording-size-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(isDemo: true, dataDirectory: root)
+        let recording = try XCTUnwrap(model.recordings.first { model.folder(for: $0) == nil })
+        XCTAssertEqual(model.recordingByteCounts[recording.id], 0)
+        let directory = model.directory(for: recording)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let system = directory.appendingPathComponent(AudioTrack.system.filename)
+        let microphone = directory.appendingPathComponent(AudioTrack.microphone.filename)
+        try Data(repeating: 0, count: 2048).write(to: system)
+        try Data(repeating: 0, count: 1024).write(to: microphone)
+        try Data(repeating: 0, count: 512).write(to: directory.appendingPathComponent("notes.txt"))
+        try model.reload()
+        XCTAssertEqual(model.recordingByteCounts[recording.id], 3072)
+        try Data(repeating: 0, count: 4096).write(to: system)
+        try FileManager.default.removeItem(at: microphone)
+        try model.reload()
+        XCTAssertEqual(model.recordingByteCounts[recording.id], 4096)
+    }
+
     func testFolderCreationScopedSearchMovesAndReopening() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-folder-model-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }

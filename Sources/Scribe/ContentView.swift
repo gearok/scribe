@@ -15,19 +15,18 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
                 .toolbar {
                     if columnVisibility == .all || columnVisibility == .automatic {
-                        ToolbarItem(id: "new-folder", placement: .navigation) {
+                        // Navigation placement moves custom items past the sidebar divider.
+                        // Automatic keeps this button beside the native sidebar toggle.
+                        ToolbarItem(id: "new-folder", placement: .automatic) {
                             Button(L10n.text("New Folder"), systemImage: "folder.badge.plus") {
                                 model.showNewFolder = true
                             }
                             .labelStyle(.iconOnly)
                             .help(L10n.text("New Folder"))
                         }
-                        if #available(macOS 26, *) {
-                            ToolbarSpacer(.fixed, placement: .navigation)
-                        }
                     }
                     if #available(macOS 26, *) {
-                        DefaultToolbarItem(kind: .sidebarToggle, placement: .navigation)
+                        DefaultToolbarItem(kind: .sidebarToggle, placement: .automatic)
                     }
                 }
         } content: {
@@ -98,7 +97,8 @@ struct ContentView: View {
                     .listRowSeparator(.hidden)
                     .selectionDisabled()
                 ForEach(group.recordings) { recording in
-                    RecordingRow(recording: recording, interfaceLanguage: model.interfaceLanguage, folder: model.folder(for: recording))
+                    RecordingRow(recording: recording, interfaceLanguage: model.interfaceLanguage,
+                                 byteCount: model.recordingByteCounts[recording.id] ?? 0, folder: model.folder(for: recording))
                         .draggable(RecordingDragItem(id: recording.id))
                         .tag(recording.id)
                         .listRowInsets(EdgeInsets(top: 12, leading: 24, bottom: 12, trailing: 16))
@@ -222,7 +222,11 @@ private struct RecordingDateSeparator: View {
 private struct RecordingRow: View {
     let recording: Recording
     let interfaceLanguage: InterfaceLanguage
+    let byteCount: Int64
     let folder: RecordingFolder?
+    private var fileSize: String {
+        byteCount.formatted(.byteCount(style: .file, spellsOutZero: false).locale(interfaceLanguage.locale))
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(recording.title).font(.headline).lineLimit(1)
@@ -232,14 +236,17 @@ private struct RecordingRow: View {
                 Text(L10n.text(recording.status == .ready ? recording.sourceName : recording.status.label, language: interfaceLanguage))
                     .foregroundStyle(Color(nsColor: .secondaryLabelColor)).lineLimit(1)
             }.font(.subheadline)
-            if let folder {
-                Label(folder.name, systemImage: "folder")
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            HStack(spacing: 8) {
+                Text(fileSize).fixedSize(horizontal: true, vertical: false)
+                if let folder {
+                    Label(folder.name, systemImage: "folder").lineLimit(1)
+                }
             }
+            .font(.caption).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(recording.title), \(RecordingPresentation.dateAndTime(recording.createdAt)), \(L10n.text(recording.status.label)), \(TimeLabel.clock(recording.duration))\(folder.map { ", " + $0.name } ?? "")")
+        .accessibilityLabel("\(recording.title), \(RecordingPresentation.dateAndTime(recording.createdAt)), \(L10n.text(recording.status.label)), \(TimeLabel.clock(recording.duration)), \(fileSize)\(folder.map { ", " + $0.name } ?? "")")
     }
 }
 
