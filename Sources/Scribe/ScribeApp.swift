@@ -117,7 +117,7 @@ struct ScribeApp: App {
         }
         MenuBarExtra {
             if model.recordingID != nil {
-                Text(L10n.format("Recording · %@", ScribeCore.TimeLabel.clock(model.elapsed)))
+                MenuBarRecordingClock(activity: model.recordingActivity)
                 Button(L10n.text("Stop Recording")) { model.stopRecording() }
             } else {
                 Button(L10n.text("Start Recording")) { activate(); model.showNewRecording = true }.disabled(model.isBusy || model.isDemo)
@@ -146,6 +146,13 @@ struct ScribeApp: App {
         }
         #endif
         return model.appearance
+    }
+}
+
+private struct MenuBarRecordingClock: View {
+    @ObservedObject var activity: RecordingActivity
+    var body: some View {
+        Text(L10n.format("Recording · %@", ScribeCore.TimeLabel.clock(activity.elapsed)))
     }
 }
 

@@ -109,6 +109,11 @@ public final class LibraryDatabase: @unchecked Sendable {
     }
 
     public func saveTranscript(recording: Recording, speakers: [Speaker], segments: [TranscriptSegment]) throws {
+        let speakerIDs = Set(speakers.map(\.id))
+        guard speakers.allSatisfy({ $0.recordingID == recording.id }),
+              segments.allSatisfy({ $0.recordingID == recording.id && speakerIDs.contains($0.speakerID) }) else {
+            throw DatabaseError(resultCode: .SQLITE_CONSTRAINT, message: "Transcript items must belong to the same recording.")
+        }
         try queue.write { db in
             try Self.saveRecording(recording, db: db)
             try db.execute(sql: "DELETE FROM segments WHERE recordingID=?", arguments: [recording.id])
@@ -128,8 +133,20 @@ public final class LibraryDatabase: @unchecked Sendable {
         }
     }
 
-    public func saveSegment(_ segment: TranscriptSegment) throws {
-        try queue.write { db in try Self.saveSegment(segment, db: db) }
+    /// UI edits update existing paragraphs only. A delayed editor callback must
+    /// not recreate text removed by retranscription or assign another meeting's speaker.
+    @discardableResult
+    public func saveSegment(_ segment: TranscriptSegment) throws -> Bool {
+        try queue.write { db in
+            try db.execute(sql: """
+                UPDATE segments SET speakerID=?, start=?, payload=?
+                WHERE id=? AND recordingID=? AND EXISTS (
+                    SELECT 1 FROM speakers WHERE id=? AND recordingID=?
+                )
+                """, arguments: [segment.speakerID, segment.start, try JSONEncoder().encode(segment),
+                                  segment.id, segment.recordingID, segment.speakerID, segment.recordingID])
+            return db.changesCount > 0
+        }
     }
 
     private static func saveSegment(_ segment: TranscriptSegment, db: Database) throws {

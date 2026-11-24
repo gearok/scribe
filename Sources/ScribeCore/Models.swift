@@ -124,9 +124,9 @@ public struct SpeechWindow: Equatable, Sendable {
 public enum SpeechWindowBuilder {
     /// Keep speaker changes and longer pauses as language-detection boundaries. Overlap is recognized once.
     public static func windows(turns: [SpeakerTurn], duration: Double, maximumDuration: Double = 22) -> [SpeechWindow] {
-        guard duration > 0, maximumDuration > 0 else { return [] }
+        guard duration.isFinite, duration > 0, maximumDuration.isFinite, maximumDuration > 0 else { return [] }
         var ranges: [(speaker: String, start: Double, end: Double)] = []
-        for turn in turns.sorted(by: { $0.start < $1.start }) where turn.end > turn.start {
+        for turn in turns.filter({ $0.start.isFinite && $0.end.isFinite && $0.end > $0.start }).sorted(by: { $0.start < $1.start }) {
             let start = max(0, turn.start), end = min(duration, turn.end)
             guard end > start else { continue }
             if let last = ranges.last, start <= last.end || (last.speaker == turn.speaker && start - last.end < 0.65) {
@@ -142,6 +142,7 @@ public enum SpeechWindowBuilder {
             let end = min(nextStart, range.end + 0.18)
             while start < end {
                 let stop = min(end, start + maximumDuration)
+                guard stop > start else { break } // Avoid an infinite loop below floating-point precision.
                 windows.append(SpeechWindow(start: start, end: stop))
                 start = stop
             }
@@ -199,8 +200,8 @@ public enum TranscriptAssembler {
 
 public enum TimeLabel {
     public static func clock(_ seconds: Double) -> String {
-        let value = seconds.isFinite ? max(0, Int(seconds)) : 0
-        if value >= 3600 { return String(format: "%d:%02d:%02d", value / 3600, value / 60 % 60, value % 60) }
-        return String(format: "%d:%02d", value / 60, value % 60)
+        let value = seconds.isFinite && seconds > 0 && seconds < Double(Int.max) ? Int(seconds) : 0
+        if value >= 3600 { return String(format: "%ld:%02ld:%02ld", value / 3600, value / 60 % 60, value % 60) }
+        return String(format: "%ld:%02ld", value / 60, value % 60)
     }
 }

@@ -21,7 +21,8 @@ struct FoldersSidebar: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        List(selection: Binding<FolderSelection?>(get: {
+        let counts = Dictionary(grouping: model.folderAssignments.values, by: { $0 }).mapValues(\.count)
+        return List(selection: Binding<FolderSelection?>(get: {
             model.selectedFolderID.map(FolderSelection.folder) ?? .all
         }, set: { selection in
             switch selection {
@@ -38,7 +39,7 @@ struct FoldersSidebar: View {
                 }
                 .tag(FolderSelection.all)
                 ForEach(model.folders) { folder in
-                    FolderRow(folder: folder, count: model.folderAssignments.values.filter { $0 == folder.id }.count)
+                    FolderRow(folder: folder, count: counts[folder.id] ?? 0)
                         .tag(FolderSelection.folder(folder.id))
                 }
             }

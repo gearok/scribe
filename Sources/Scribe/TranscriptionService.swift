@@ -96,7 +96,7 @@ actor TranscriptionService {
         // not need speaker clustering (which can reject short, otherwise transcribable clips).
         for track in tracks {
             try Task.checkCancellation()
-            windowsByTrack[track] = try AudioActivityScanner.windows(in: directory.appendingPathComponent(track.filename))
+            windowsByTrack[track] = try AudioActivityScanner.windows(in: RecordingStorage.audioURL(for: track, in: directory))
         }
         // Release speaker models before loading Whisper. Each speech window gets a fresh
         // language decision, so English turns are not translated into Russian.
@@ -110,7 +110,7 @@ actor TranscriptionService {
             let message = "Identifying individual speakers"
             await progress(message, nil)
             do {
-                let result = try await diarizer.process(directory.appendingPathComponent(AudioTrack.system.filename)) { done, total in
+                let result = try await diarizer.process(RecordingStorage.audioURL(for: .system, in: directory)) { done, total in
                     Task { await progress(message, total > 0 ? Double(done) / Double(total) : nil) }
                 }
                 let turns = result.segments.map {
@@ -118,7 +118,7 @@ actor TranscriptionService {
                 }
                 turnsByTrack[.system] = turns
                 if !turns.isEmpty {
-                    let file = try AVAudioFile(forReading: directory.appendingPathComponent(AudioTrack.system.filename))
+                    let file = try AVAudioFile(forReading: RecordingStorage.audioURL(for: .system, in: directory))
                     windowsByTrack[.system] = SpeechWindowBuilder.windows(turns: turns, duration: Double(file.length) / file.processingFormat.sampleRate)
                 }
             } catch OfflineDiarizationError.noSpeechDetected {
@@ -137,7 +137,7 @@ actor TranscriptionService {
         do {
             for track in tracks {
                 try Task.checkCancellation()
-                let file = try AVAudioFile(forReading: directory.appendingPathComponent(track.filename))
+                let file = try AVAudioFile(forReading: RecordingStorage.audioURL(for: track, in: directory))
                 let duration = Double(file.length) / file.processingFormat.sampleRate
                 let windows = windowsByTrack[track] ?? []
                 for (index, window) in windows.enumerated() {
@@ -208,9 +208,4 @@ actor TranscriptionService {
         await progress("Finishing your transcript", 1)
         return (speakers, TranscriptInterleaver.interleave(segments))
     }
-}
-
-enum ScribeError: LocalizedError {
-    case message(String)
-    var errorDescription: String? { if case .message(let message) = self { return L10n.text(message) }; return nil }
 }

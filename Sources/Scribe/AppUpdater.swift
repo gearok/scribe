@@ -69,8 +69,10 @@ final class AppUpdater: NSObject, ObservableObject, SPUUpdaterDelegate {
     private var hasActiveWork: Bool { model.map { $0.isBusy || $0.isPreparingModels } ?? false }
 
     private func refreshActivity() {
-        isBusy = hasActiveWork
-        installationGate.isBusy = isBusy
+        let busy = hasActiveWork
+        guard isBusy != busy else { return }
+        isBusy = busy
+        installationGate.isBusy = busy
     }
 
     func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {

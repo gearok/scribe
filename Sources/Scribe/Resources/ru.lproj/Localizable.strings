@@ -7,6 +7,10 @@
 "Audio, transcripts, and speaker names stay on this Mac." = "Аудио, расшифровки и имена участников хранятся на этом Mac.";
 "Cancel" = "Отмена";
 "Cancel Processing" = "Отменить обработку";
+"Compress Audio" = "Сжать аудио";
+"Compressing audio…" = "Сжатие аудио…";
+"The compressed audio could not be verified." = "Не удалось проверить сжатое аудио.";
+"Audio compression failed. Uncompressed tracks have been kept: %@" = "Не удалось сжать аудио. Несжатые дорожки сохранены: %@";
 "Could not open this audio file." = "Не удалось открыть аудиофайл.";
 "Could not open this audio or video file." = "Не удалось открыть аудио- или видеофайл.";
 "Could not read the imported audio." = "Не удалось прочитать импортированное аудио.";

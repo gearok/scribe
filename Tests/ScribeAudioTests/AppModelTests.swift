@@ -1,9 +1,57 @@
 import XCTest
 import ScribeCore
+import Combine
 @testable import Scribe
 
 @MainActor
 final class AppModelTests: XCTestCase {
+    func testRecordingMeterUpdatesDoNotInvalidateTheLibraryModel() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-meter-model-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(isDemo: true, dataDirectory: root)
+        var libraryUpdates = 0, meterUpdates = 0
+        let library = model.objectWillChange.sink { libraryUpdates += 1 }
+        let meters = model.recordingActivity.objectWillChange.sink { meterUpdates += 1 }
+        model.recordingActivity.elapsed = 1
+        model.recordingActivity.microphoneLevel = 0.5
+        model.recordingActivity.systemLevel = 0.25
+        XCTAssertEqual(libraryUpdates, 0)
+        XCTAssertEqual(meterUpdates, 3)
+        withExtendedLifetime((library, meters)) {}
+    }
+
+    func testMetadataEditsRetainCachedAudioSizesAndCannotRestoreDeletedRecording() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-metadata-cache-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(isDemo: true, dataDirectory: root)
+        let recording = try XCTUnwrap(model.selectedRecording)
+        let folder = model.directory(for: recording)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try Data(repeating: 0, count: 123).write(to: folder.appendingPathComponent("system.caf"))
+        model.renameRecording(recording, title: "Renamed")
+        model.changeLanguage(recording, to: .english)
+        XCTAssertTrue(model.createFolder(name: "Another folder"))
+        XCTAssertEqual(model.recordingByteCounts[recording.id], 0, "Metadata edits must not rescan audio.")
+        try model.reload()
+        XCTAssertEqual(model.recordingByteCounts[recording.id], 123)
+        model.delete(recording)
+        model.renameRecording(recording, title: "Delayed focus callback")
+        model.changeLanguage(recording, to: .russian)
+        try model.reload()
+        XCTAssertFalse(model.recordings.contains { $0.id == recording.id })
+    }
+
+    func testTranscriptSearchUsesLocalizedSpeakerDisplayNames() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-speaker-search-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(isDemo: true, dataDirectory: root)
+        // Do not change the persisted interface preference for this regression check.
+        let local = try XCTUnwrap(model.speakers.first(where: \.isLocal))
+        model.transcriptSearch = local.displayName(in: model.interfaceLanguage)
+        XCTAssertFalse(model.filteredSegments.isEmpty)
+        XCTAssertTrue(model.filteredSegments.allSatisfy { $0.speakerID == local.id })
+    }
+
     func testRecordingSizesIncludeBothTracksWithoutAFolderAndRefreshOnReload() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-recording-size-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }

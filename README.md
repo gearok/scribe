@@ -10,7 +10,15 @@ Scribe is a native macOS app for recording meetings and turning them into search
 4. **Clean up overlaps.** Scribe removes matching passages recognized at overlapping times, including meeting audio picked up again by the microphone. It keeps the meeting track’s speaker-labeled copy and preserves words that do not match. Short replies and phrases repeated later are kept.
 5. **Review.** The transcript appears with speaker labels and timestamps. Listen, assign names to speakers, edit the text, and export it. Overlapping voices may need manual correction.
 
-Overlap cleanup runs during transcription. To apply it to an older recording, use **Transcribe Again**; this replaces the transcript and its manual edits after confirmation. Original audio tracks are kept.
+Overlap cleanup runs during transcription. To apply it to an older recording, use **Transcribe Again**; this replaces the transcript and its manual edits after confirmation. Saved audio tracks remain available.
+
+## Audio storage
+
+Scribe captures uncompressed audio so a recording is saved immediately. After the first successful transcription, it compresses each track locally to **AAC in an M4A file, 32 kb/s mono at 16 kHz**. If the models are not installed, compression runs after recording or importing instead. Microphone and meeting audio stay separate and synchronized. Playback and future transcription can read the compressed files directly.
+
+This is lossy speech compression: it can slightly change the sound. The nominal audio data is about **14 MB per hour per track**, compared with about 230 MB for the uncompressed track; container overhead adds a little. Scribe checks the full compressed file and its sample count before removing the larger original. If compression fails or does not save space, the original is kept.
+
+Existing recordings remain unchanged until you choose **Compress Audio** in the recording’s actions menu or context menu, or successfully transcribe them again. Their transcripts and speaker names are preserved.
 
 The models need a one-time internet download from Settings and several GB of free disk space. Meeting audio is never sent to a transcription service. Once the models are downloaded, processing works offline.
 
@@ -47,5 +55,7 @@ swift test
 The app bundle is written to `build/Scribe.app`. Each packaged build is copied to a temporary location and runs a resource check before it can be released, so development build paths cannot substitute for installed resources. Demo mode uses a temporary library and does not change your recordings. The model integration test is opt-in through `SCRIBE_TEST_MODELS_DIR`; the regular test suite does not download models or record audio.
 
 ## Built with
+
+The `ScribeCore` target contains database persistence and transcript algorithms. The `Scribe` target contains audio services, the app coordinator, and native views. Library, recording-detail, and transcript views live in separate files. Live recording meters and playback highlighting have their own observable state so frequent audio updates do not refresh the entire library.
 
 [SwiftUI](https://developer.apple.com/xcode/swiftui/), [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift) for speech recognition, [FluidAudio](https://github.com/FluidInference/FluidAudio) for speaker detection.

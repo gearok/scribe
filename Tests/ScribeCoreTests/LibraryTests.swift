@@ -2,6 +2,33 @@ import XCTest
 @testable import ScribeCore
 
 final class LibraryTests: XCTestCase {
+    func testDelayedParagraphEditDoesNotRestoreAReplacedTranscript() throws {
+        let (db, _) = try makeDatabase()
+        let recording = Recording(title: "Meeting", status: .ready)
+        let speaker = Speaker(recordingID: recording.id, name: "Anna", colorIndex: 0)
+        var old = TranscriptSegment(recordingID: recording.id, speakerID: speaker.id, start: 0, end: 1, text: "Old", track: .system)
+        try db.saveTranscript(recording: recording, speakers: [speaker], segments: [old])
+        let replacement = TranscriptSegment(recordingID: recording.id, speakerID: speaker.id, start: 0, end: 1, text: "New", track: .system)
+        try db.saveTranscript(recording: recording, speakers: [speaker], segments: [replacement])
+        old.text = "Delayed edit"
+        XCTAssertFalse(try db.saveSegment(old))
+        XCTAssertEqual(try db.transcript(recordingID: recording.id).segments, [replacement])
+    }
+
+    func testParagraphCannotBeAssignedToAnotherRecordingsSpeaker() throws {
+        let (db, _) = try makeDatabase()
+        let first = Recording(title: "First"), second = Recording(title: "Second")
+        let speaker = Speaker(recordingID: first.id, name: "First", colorIndex: 0)
+        let other = Speaker(recordingID: second.id, name: "Second", colorIndex: 1)
+        let segment = TranscriptSegment(recordingID: first.id, speakerID: speaker.id, start: 0, end: 1, text: "Text", track: .system)
+        try db.saveTranscript(recording: first, speakers: [speaker], segments: [segment])
+        try db.saveTranscript(recording: second, speakers: [other], segments: [])
+        var invalid = segment; invalid.speakerID = other.id
+        XCTAssertFalse(try db.saveSegment(invalid))
+        XCTAssertThrowsError(try db.saveTranscript(recording: first, speakers: [other], segments: [invalid]))
+        XCTAssertEqual(try db.transcript(recordingID: first.id).segments, [segment])
+    }
+
     private func makeDatabase() throws -> (LibraryDatabase, URL) {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("scribe-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -163,5 +190,16 @@ final class TranscriptAssemblerTests: XCTestCase {
         XCTAssertEqual(TimeLabel.clock(3605), "1:00:05")
         XCTAssertEqual(TimeLabel.clock(-1), "0:00")
         XCTAssertEqual(TimeLabel.clock(.infinity), "0:00")
+        XCTAssertEqual(TimeLabel.clock(.greatestFiniteMagnitude), "0:00")
+        XCTAssertEqual(TimeLabel.clock(Double(Int.max)), "0:00")
+    }
+
+    func testSpeechWindowsRejectInvalidDurationsAndTurnTimes() {
+        let valid = SpeakerTurn(speaker: "a", start: 1, end: 2)
+        XCTAssertTrue(SpeechWindowBuilder.windows(turns: [valid], duration: .infinity).isEmpty)
+        XCTAssertTrue(SpeechWindowBuilder.windows(turns: [valid], duration: 10, maximumDuration: .nan).isEmpty)
+        let invalid = [SpeakerTurn(speaker: "b", start: .nan, end: 3), SpeakerTurn(speaker: "c", start: 4, end: .infinity)]
+        XCTAssertEqual(SpeechWindowBuilder.windows(turns: invalid + [valid], duration: 10),
+                       SpeechWindowBuilder.windows(turns: [valid], duration: 10))
     }
 }

@@ -29,7 +29,7 @@ final class PlaybackController: ObservableObject {
         guard let recording, let directory else { return }
         var loaded: [AVAudioPlayer] = []
         for track in [AudioTrack.system, .microphone] {
-            let url = directory.appendingPathComponent(track.filename)
+            let url = RecordingStorage.audioURL(for: track, in: directory)
             guard FileManager.default.fileExists(atPath: url.path) else { continue }
             let player = try AVAudioPlayer(contentsOf: url)
             player.enableRate = true; player.rate = rate; player.prepareToPlay()

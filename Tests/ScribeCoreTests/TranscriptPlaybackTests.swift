@@ -2,6 +2,38 @@ import XCTest
 @testable import ScribeCore
 
 final class TranscriptPlaybackTests: XCTestCase {
+    func testIndexedTimelineMatchesLinearReferenceAcrossSeeksAndManyOverlaps() {
+        let ordered: [TranscriptSegment] = (0..<3000).map { index in
+            let start = Double(index / 3)
+            let duration: Double = index % 17 == 0 ? 100 : 2
+            return paragraph(String(index), start, start + duration)
+        }
+        let segments = Array(ordered.reversed())
+        let timeline = TranscriptPlaybackTimeline(segments: segments)
+        for position in stride(from: 1050.0, through: 0, by: -2.75) {
+            let expectedActive = Set(segments.filter { $0.start <= position && position < $0.end }.map(\.id))
+            var latest: TranscriptSegment?
+            for segment in segments where segment.start <= position {
+                if segment.start >= (latest?.start ?? -.infinity) { latest = segment }
+            }
+            let actual = timeline.state(at: position, isPlaying: true)
+            XCTAssertEqual(actual.activeSegmentIDs, expectedActive)
+            XCTAssertEqual(actual.followingSegmentID, latest?.id)
+        }
+    }
+
+    func testIndexedPlaybackScaling() {
+        let segments = (0..<20_000).map { paragraph(String($0), Double($0) * 2, Double($0) * 2 + 1) }
+        let timeline = TranscriptPlaybackTimeline(segments: segments)
+        let start = ContinuousClock.now
+        var activeCount = 0
+        for index in 0..<10_000 {
+            activeCount += timeline.state(at: Double(index * 2) + 0.5, isPlaying: true).activeSegmentIDs.count
+        }
+        XCTAssertEqual(activeCount, 10_000)
+        print("Indexed playback: 10,000 lookups across 20,000 paragraphs in \(ContinuousClock.now - start)")
+    }
+
     private func paragraph(_ id: String, _ start: Double, _ end: Double, track: AudioTrack = .system) -> TranscriptSegment {
         TranscriptSegment(id: id, recordingID: "recording", speakerID: id, start: start, end: end, text: id, track: track)
     }

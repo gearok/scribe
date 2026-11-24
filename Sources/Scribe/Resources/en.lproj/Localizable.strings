@@ -7,6 +7,10 @@
 "Audio, transcripts, and speaker names stay on this Mac." = "Audio, transcripts, and speaker names stay on this Mac.";
 "Cancel" = "Cancel";
 "Cancel Processing" = "Cancel Processing";
+"Compress Audio" = "Compress Audio";
+"Compressing audio…" = "Compressing audio…";
+"The compressed audio could not be verified." = "The compressed audio could not be verified.";
+"Audio compression failed. Uncompressed tracks have been kept: %@" = "Audio compression failed. Uncompressed tracks have been kept: %@";
 "Could not open this audio file." = "Could not open this audio file.";
 "Could not open this audio or video file." = "Could not open this audio or video file.";
 "Could not read the imported audio." = "Could not read the imported audio.";
